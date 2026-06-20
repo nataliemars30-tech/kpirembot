@@ -43,4 +43,4 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     setup_scheduler(app)
-    print("🌸
+    print("REN Bot zapushen!")

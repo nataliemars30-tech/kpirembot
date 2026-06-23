@@ -9,39 +9,29 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 def _parse(url):
     p = urllib.parse.urlparse(url)
     return dict(
-        host=p.hostname,
-        user=p.username,
-        password=p.password,
-        database=p.path.lstrip("/"),
-        port=p.port or 5432,
-        ssl_context=True,
+        host=p.hostname, user=p.username, password=p.password,
+        database=p.path.lstrip("/"), port=p.port or 5432, ssl_context=True,
     )
-
 
 def get_conn():
     conn = pg8000.dbapi.connect(**_parse(DATABASE_URL))
     conn.autocommit = False
     return conn
 
-
 def _all(cur):
-    if not cur.description:
-        return []
+    if not cur.description: return []
     cols = [d[0] for d in cur.description]
     return [dict(zip(cols, row)) for row in cur.fetchall()]
 
-
 def _one(cur):
-    if not cur.description:
-        return None
+    if not cur.description: return None
     cols = [d[0] for d in cur.description]
-    row  = cur.fetchone()
+    row = cur.fetchone()
     return dict(zip(cols, row)) if row else None
 
 
 def init_db():
-    conn = get_conn()
-    cur  = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
 
     cur.execute("""CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -57,6 +47,9 @@ def init_db():
         user_id INTEGER NOT NULL REFERENCES users(id),
         date TEXT NOT NULL,
         started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        open_receipt_photo TEXT,
+        receipt_time TEXT,
+        late_type TEXT,
         UNIQUE(user_id, date)
     )""")
 
@@ -81,6 +74,7 @@ def init_db():
         id SERIAL PRIMARY KEY,
         florist_id INTEGER NOT NULL REFERENCES users(id),
         photo_file_id TEXT,
+        cost INTEGER NOT NULL DEFAULT 0,
         price INTEGER NOT NULL,
         status TEXT DEFAULT 'in_vitrina',
         director_rating INTEGER,
@@ -88,6 +82,7 @@ def init_db():
         checked_at TEXT,
         sold_at TEXT,
         sale_channel TEXT,
+        sold_price INTEGER,
         disassembled_at TEXT,
         sent_4day INTEGER DEFAULT 0,
         sent_6day INTEGER DEFAULT 0
@@ -112,42 +107,40 @@ def init_db():
         "kpi_flowwow_max_skips":     "1",
         "kpi_flowwow_max_norm":      "4",
         "kpi_bouquet_max_bad":       "2",
+        "overhead_pct":              "25",
+        "kpi_late_light_max":        "5",
+        "kpi_late_medium_max":       "3",
+        "kpi_late_heavy_max":        "2",
     }
     for k, v in defaults.items():
         cur.execute(
             "INSERT INTO settings (key,value) VALUES (%s,%s) ON CONFLICT (key) DO NOTHING",
-            (k, v)
-        )
+            (k, v))
 
-    conn.commit()
-    cur.close(); conn.close()
+    conn.commit(); cur.close(); conn.close()
 
 
 def get_setting(key, default=None):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT value FROM settings WHERE key=%s", (key,))
-    row = _one(cur)
-    cur.close(); conn.close()
+    row = _one(cur); cur.close(); conn.close()
     return row["value"] if row else default
-
 
 def set_setting(key, value):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
-        "INSERT INTO settings (key,value) VALUES (%s,%s) "
-        "ON CONFLICT (key) DO UPDATE SET value=%s",
-        (key, str(value), str(value))
-    )
+        "INSERT INTO settings (key,value) VALUES (%s,%s) ON CONFLICT (key) DO UPDATE SET value=%s",
+        (key, str(value), str(value)))
     conn.commit(); cur.close(); conn.close()
-
 
 def get_all_settings():
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT key, value FROM settings")
-    rows = _all(cur)
-    cur.close(); conn.close()
+    rows = _all(cur); cur.close(); conn.close()
     return {r["key"]: r["value"] for r in rows}
 
+
+# ── Users ────────────────────────────────────────────────
 
 def get_user(telegram_id):
     conn = get_conn(); cur = conn.cursor()
@@ -155,30 +148,24 @@ def get_user(telegram_id):
     row = _one(cur); cur.close(); conn.close()
     return row
 
-
 def get_user_by_id(user_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE id=%s", (user_id,))
     row = _one(cur); cur.close(); conn.close()
     return row
 
-
 def create_user(telegram_id, name, role="florist"):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
-        "INSERT INTO users (telegram_id,name,role) VALUES (%s,%s,%s) "
-        "ON CONFLICT (telegram_id) DO NOTHING",
-        (telegram_id, name, role)
-    )
+        "INSERT INTO users (telegram_id,name,role) VALUES (%s,%s,%s) ON CONFLICT (telegram_id) DO NOTHING",
+        (telegram_id, name, role))
     conn.commit(); cur.close(); conn.close()
-
 
 def get_director():
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE role='director' LIMIT 1")
     row = _one(cur); cur.close(); conn.close()
     return row
-
 
 def get_florists(active_only=True):
     conn = get_conn(); cur = conn.cursor()
@@ -189,14 +176,14 @@ def get_florists(active_only=True):
     return rows
 
 
+# ── Shifts ───────────────────────────────────────────────
+
 def start_shift(user_id, date):
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute(
-            "INSERT INTO shifts (user_id,date) VALUES (%s,%s) "
-            "ON CONFLICT (user_id,date) DO NOTHING",
-            (user_id, date)
-        )
+            "INSERT INTO shifts (user_id,date) VALUES (%s,%s) ON CONFLICT (user_id,date) DO NOTHING",
+            (user_id, date))
         changed = cur.rowcount > 0
         conn.commit()
     except Exception:
@@ -204,6 +191,12 @@ def start_shift(user_id, date):
     cur.close(); conn.close()
     return changed
 
+def update_shift(user_id, date, **kwargs):
+    conn = get_conn(); cur = conn.cursor()
+    sets = ", ".join(f"{k}=%s" for k in kwargs)
+    vals = list(kwargs.values()) + [user_id, date]
+    cur.execute(f"UPDATE shifts SET {sets} WHERE user_id=%s AND date=%s", vals)
+    conn.commit(); cur.close(); conn.close()
 
 def has_shift(user_id, date):
     conn = get_conn(); cur = conn.cursor()
@@ -211,46 +204,58 @@ def has_shift(user_id, date):
     row = _one(cur); cur.close(); conn.close()
     return row is not None
 
+def has_receipt(user_id, date):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT open_receipt_photo FROM shifts WHERE user_id=%s AND date=%s", (user_id, date))
+    row = _one(cur); cur.close(); conn.close()
+    return row and row.get("open_receipt_photo") is not None
 
 def get_working_florists(date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT u.* FROM users u JOIN shifts s ON u.id=s.user_id "
-        "WHERE s.date=%s AND u.role='florist' AND u.active=1",
-        (date,)
-    )
+        "WHERE s.date=%s AND u.role='florist' AND u.active=1", (date,))
     rows = _all(cur); cur.close(); conn.close()
     return rows
-
 
 def get_month_shifts(user_id, year_month):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM shifts WHERE user_id=%s AND date LIKE %s",
-        (user_id, f"{year_month}%")
-    )
+    cur.execute("SELECT * FROM shifts WHERE user_id=%s AND date LIKE %s",
+                (user_id, f"{year_month}%"))
     rows = _all(cur); cur.close(); conn.close()
     return rows
 
+def get_month_lates(user_id, year_month):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute(
+        "SELECT late_type, COUNT(*) as cnt FROM shifts "
+        "WHERE user_id=%s AND date LIKE %s AND late_type IS NOT NULL "
+        "GROUP BY late_type",
+        (user_id, f"{year_month}%"))
+    rows = _all(cur); cur.close(); conn.close()
+    result = {"light": 0, "medium": 0, "heavy": 0, "no_show": 0}
+    for r in rows:
+        if r["late_type"] in result:
+            result[r["late_type"]] = r["cnt"]
+    return result
+
+
+# ── Tasks ────────────────────────────────────────────────
 
 def create_task(task_type, assigned_to, date, scheduled_time):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
-        "INSERT INTO tasks (type,assigned_to,date,scheduled_time) "
-        "VALUES (%s,%s,%s,%s) RETURNING id",
-        (task_type, assigned_to, date, scheduled_time)
-    )
+        "INSERT INTO tasks (type,assigned_to,date,scheduled_time) VALUES (%s,%s,%s,%s) RETURNING id",
+        (task_type, assigned_to, date, scheduled_time))
     tid = _one(cur)["id"]
     conn.commit(); cur.close(); conn.close()
     return tid
-
 
 def get_task(task_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT * FROM tasks WHERE id=%s", (task_id,))
     row = _one(cur); cur.close(); conn.close()
     return row
-
 
 def update_task(task_id, **kwargs):
     conn = get_conn(); cur = conn.cursor()
@@ -259,17 +264,14 @@ def update_task(task_id, **kwargs):
     cur.execute(f"UPDATE tasks SET {sets} WHERE id=%s", vals)
     conn.commit(); cur.close(); conn.close()
 
-
 def get_pending_task(user_id, task_type, date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT * FROM tasks WHERE assigned_to=%s AND type=%s AND date=%s "
         "AND status IN ('pending','in_hour')",
-        (user_id, task_type, date)
-    )
+        (user_id, task_type, date))
     row = _one(cur); cur.close(); conn.close()
     return row
-
 
 def get_month_tasks(year_month, florist_id=None):
     conn = get_conn(); cur = conn.cursor()
@@ -284,41 +286,35 @@ def get_month_tasks(year_month, florist_id=None):
     rows = _all(cur); cur.close(); conn.close()
     return rows
 
-
 def get_unrated_tasks(hours=24):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT t.*, u.telegram_id as florist_tg, u.name as florist_name "
         "FROM tasks t JOIN users u ON t.assigned_to=u.id "
         "WHERE t.status='submitted' AND t.submitted_at IS NOT NULL "
-        "AND t.submitted_at::timestamp < NOW() - INTERVAL '24 hours'"
-    )
+        "AND t.submitted_at::timestamp < NOW() - INTERVAL '24 hours'")
     rows = _all(cur); cur.close(); conn.close()
     return rows
 
 
-def create_bouquet(florist_id, photo_file_id, price):
+# ── Bouquets ─────────────────────────────────────────────
+
+def create_bouquet(florist_id, photo_file_id, cost, price):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
-        "INSERT INTO bouquets (florist_id,photo_file_id,price) "
-        "VALUES (%s,%s,%s) RETURNING id",
-        (florist_id, photo_file_id, price)
-    )
+        "INSERT INTO bouquets (florist_id,photo_file_id,cost,price) VALUES (%s,%s,%s,%s) RETURNING id",
+        (florist_id, photo_file_id, cost, price))
     bid = _one(cur)["id"]
     conn.commit(); cur.close(); conn.close()
     return bid
-
 
 def get_bouquet(bouquet_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT b.*, u.name as florist_name FROM bouquets b "
-        "JOIN users u ON b.florist_id=u.id WHERE b.id=%s",
-        (bouquet_id,)
-    )
+        "JOIN users u ON b.florist_id=u.id WHERE b.id=%s", (bouquet_id,))
     row = _one(cur); cur.close(); conn.close()
     return row
-
 
 def update_bouquet(bouquet_id, **kwargs):
     conn = get_conn(); cur = conn.cursor()
@@ -327,20 +323,17 @@ def update_bouquet(bouquet_id, **kwargs):
     cur.execute(f"UPDATE bouquets SET {sets} WHERE id=%s", vals)
     conn.commit(); cur.close(); conn.close()
 
-
 def get_active_bouquets(florist_id=None):
     conn = get_conn(); cur = conn.cursor()
     q = ("SELECT b.*, u.name as florist_name FROM bouquets b "
          "JOIN users u ON b.florist_id=u.id WHERE b.status='in_vitrina'")
     params = []
     if florist_id:
-        q += " AND b.florist_id=%s"
-        params.append(florist_id)
+        q += " AND b.florist_id=%s"; params.append(florist_id)
     q += " ORDER BY b.created_at"
     cur.execute(q, params)
     rows = _all(cur); cur.close(); conn.close()
     return rows
-
 
 def get_bouquets_for_check(days, field):
     conn = get_conn(); cur = conn.cursor()
@@ -349,11 +342,9 @@ def get_bouquets_for_check(days, field):
         f"FROM bouquets b JOIN users u ON b.florist_id=u.id "
         f"WHERE b.status='in_vitrina' "
         f"AND b.created_at::date = CURRENT_DATE - {days} "
-        f"AND b.{field}=0"
-    )
+        f"AND b.{field}=0")
     rows = _all(cur); cur.close(); conn.close()
     return rows
-
 
 def get_month_bouquets(year_month, florist_id=None):
     conn = get_conn(); cur = conn.cursor()
@@ -361,8 +352,7 @@ def get_month_bouquets(year_month, florist_id=None):
          "JOIN users u ON b.florist_id=u.id WHERE b.created_at LIKE %s")
     params = [f"{year_month}%"]
     if florist_id:
-        q += " AND b.florist_id=%s"
-        params.append(florist_id)
+        q += " AND b.florist_id=%s"; params.append(florist_id)
     cur.execute(q, params)
     rows = _all(cur); cur.close(); conn.close()
     return rows

@@ -1,4 +1,13 @@
-import logging
+async def cmd_reset_users(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Удалить всех флористов для повторной регистрации."""
+    if not is_director(update.effective_user.id): return
+    conn = db.get_conn(); cur = conn.cursor()
+    cur.execute("DELETE FROM tasks WHERE assigned_to IN (SELECT id FROM users WHERE role='florist')")
+    cur.execute("DELETE FROM bouquets WHERE florist_id IN (SELECT id FROM users WHERE role='florist')")
+    cur.execute("DELETE FROM shifts WHERE user_id IN (SELECT id FROM users WHERE role='florist')")
+    cur.execute("DELETE FROM users WHERE role='florist'")
+    conn.commit(); cur.close(); conn.close()
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
 from datetime import datetime, date, time as dtime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, BotCommandScopeChat
 from telegram.ext import ContextTypes, ConversationHandler

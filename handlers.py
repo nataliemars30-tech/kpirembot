@@ -1,4 +1,129 @@
-async def cmd_reset_users(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+
+
+Agents week is here! Stay tuned daily for drops about all things Railway for Agents. Learn more!
+Deployments
+Variables
+Metrics
+Console
+Settings
+Unexposed service
+3.13.13python@3.13.13
+US West
+1 Replica
+worker
+/
+Crashed
+Jun 24, 2026, 9:16 AM GMT+3
+Get Help
+Filter and search logs
+You reached the start of the range
+Jun 24, 2026, 9:16 AM
+Starting Container
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+Traceback (most recent call last):
+  File "/app/bot.py", line 9, in <module>
+    from handlers import (
+    ...<7 lines>...
+    )
+  File "/app/handlers.py", line 10
+    await update.message.reply_text("Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")import logging
+                                                                                                                    ^^^^^^
+SyntaxError: invalid syntax
+You reached the end of the range
+Jun 24, 2026, 9:17 AM
+New Agent
+Agent is now billable.
+Usage counts toward your workspace spend. Learn more →
+9:00async def cmd_reset_users(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Удалить всех флористов для повторной регистрации."""
     if not is_director(update.effective_user.id): return
     conn = db.get_conn(); cur = conn.cursor()

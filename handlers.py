@@ -543,23 +543,26 @@ async def cmd_bukет(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_vitrina(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = db.get_user(update.effective_user.id)
     if not user: return
-    fid      = user["id"] if user["role"] == "florist" else None
-    bouquets = db.get_active_bouquets(fid)
+    # Все видят все букеты
+    bouquets = db.get_active_bouquets()
     if not bouquets:
         await update.message.reply_text("Активных букетов в витрине нет.")
         return
     now = datetime.now()
-    await update.message.reply_text(f"Активных букетов: {len(bouquets)} шт.")
+    await update.message.reply_text(f"Активных букетов в витрине: {len(bouquets)} шт.")
     for b in bouquets:
         created = datetime.fromisoformat(b["created_at"])
         days    = (now - created).days
-        warn    = " ⚠️" if days >= 4 else ""
-        info    = f"Флорист: {b['florist_name']}\n" if user["role"] == "director" else ""
-        caption = (f"Букет #{b['id']}\n{info}"
-                   f"Себестоимость: {b.get('cost',0):,} ₽\n"
+        warn    = " ⚠️ Проверить!" if days >= 4 else ""
+        caption = (f"Букет #{b['id']}\n"
+                   f"Флорист: {b['florist_name']}\n"
+                   f"Себестоимость: {b.get('cost', 0):,} ₽\n"
                    f"Цена: {b['price']:,} ₽\n"
                    f"В витрине: {days} дн.{warn}").replace(",", " ")
-        kb_b = kb.bouquet_status_kb(b["id"]) if user["role"] == "florist" else None
+        # Кнопки только у владельца букета и у директора
+        kb_b = kb.bouquet_status_kb(b["id"])
+
+
         if b.get("photo_file_id"):
             await update.message.reply_photo(photo=b["photo_file_id"], caption=caption, reply_markup=kb_b)
         else:

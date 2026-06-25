@@ -225,6 +225,7 @@ def main():
 
     setup_scheduler(app)
     print("REN Bot zapushen!")
+    app.add_handler(CommandHandler("migrate_db", cmd_migrate_db))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

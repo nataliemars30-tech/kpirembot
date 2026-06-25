@@ -751,3 +751,18 @@ async def cmd_reset_users(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     conn.close()
     await update.message.reply_text(
         "Все флористы удалены. Теперь они могут зарегистрироваться заново через /start")
+    async def cmd_migrate_db(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if not is_director(update.effective_user.id): return
+    conn = db.get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("ALTER TABLE shifts ADD COLUMN IF NOT EXISTS open_receipt_photo TEXT")
+        cur.execute("ALTER TABLE shifts ADD COLUMN IF NOT EXISTS receipt_time TEXT")
+        cur.execute("ALTER TABLE shifts ADD COLUMN IF NOT EXISTS late_type TEXT")
+        cur.execute("ALTER TABLE bouquets ADD COLUMN IF NOT EXISTS cost INTEGER DEFAULT 0")
+        cur.execute("ALTER TABLE bouquets ADD COLUMN IF NOT EXISTS sold_price INTEGER")
+        conn.commit()
+        await update.message.reply_text("База данных обновлена!")
+    except Exception as e:
+        await update.message.reply_text(f"Ошибка: {e}")
+    finally:
+        cur.close(); conn.close()

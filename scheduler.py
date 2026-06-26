@@ -51,14 +51,17 @@ async def job_shift_reminder(app):
     sh, sm = map(int, shift_time.split(":"))
     shift_min = sh * 60 + sm
     if not (shift_min - 10 <= t <= shift_min + 120):
+        log.info(f"[shift_reminder] вне окна: t={t} shift_min={shift_min} окно={shift_min-10}-{shift_min+120}")
         return
 
     director = db.get_director()
     florists = db.get_florists()
+    log.info(f"[shift_reminder] t={t} shift_min={shift_min} florists={len(florists)}")
 
     for f in florists:
         has_r = db.has_receipt(f["id"], today)
         has_s = db.has_shift(f["id"], today)
+        log.info(f"[shift_reminder] {f['name']} has_shift={has_s} has_receipt={has_r}")
 
         # Чек уже есть — не беспокоим
         if has_r:
@@ -139,9 +142,9 @@ async def job_all_task_reminders(app):
     log.info(f"[reminder] t={t} today={today} workers={len(workers)}")
 
     for task_type, start_min, label in [
-        ("vitrina_bouquets",     14 * 60, "витрину букетов (14:00)"),
-        ("vitrina_compositions", 18 * 60, "витрину композиций (18:00)"),
-        ("flowwow",              15 * 60, "Flowwow (15:00)"),
+        ("vitrina_bouquets",     14 * 60, "витрину букетов (14:00) — пришли фото"),
+        ("vitrina_compositions", 18 * 60, "витрину композиций (18:00) — пришли фото"),
+        ("flowwow",              15 * 60, "Flowwow (15:00) — пришли фото"),
     ]:
         if t < start_min + 5:
             continue
@@ -153,7 +156,7 @@ async def job_all_task_reminders(app):
                 continue
             try:
                 await app.bot.send_message(f["telegram_id"],
-                    f"Не забудь отчитаться по {label}!")
+                    f"Не забудь отчитаться: {label}!")
                 log.info(f"[reminder] sent to {f['name']}")
             except Exception as e:
                 log.error(e)

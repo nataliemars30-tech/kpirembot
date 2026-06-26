@@ -385,6 +385,30 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ── Photo handler ──────────────────────────────────────────
 
+async def _send_missed_tasks(bot, user, now_time_str):
+    """Отправить задачи которые были пропущены пока флорист не начал смену."""
+    today  = TODAY()
+    try:
+        h, m = map(int, now_time_str.split(":"))
+        t = h * 60 + m
+    except Exception:
+        return
+
+    tasks_schedule = [
+        ("vitrina_bouquets",     14 * 60, db.get_setting("vitrina_bouquets_time",     "14:00")),
+        ("flowwow",              15 * 60, db.get_setting("flowwow_time",              "15:00")),
+        ("vitrina_compositions", 18 * 60, db.get_setting("vitrina_compositions_time", "18:00")),
+    ]
+
+    for task_type, task_min, task_time in tasks_schedule:
+        # Задача уже прошла и ещё не создана
+        if t > task_min:
+            existing = db.get_pending_task(user["id"], task_type, today)
+            if not existing:
+                await send_task(bot, user, task_type, task_time)
+
+
+
 async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = db.get_user(update.effective_user.id)
     if not user: return
@@ -392,16 +416,22 @@ async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # Фото чека открытия смены
     # Проверяем ctx.user_data ИЛИ базу данных (смена есть, чека нет)
+    # Определяем состояние строго по флагам
+    waiting_receipt   = "waiting_receipt"   in ctx.user_data
+    waiting_task_photo= "pending_task_id"   in ctx.user_data
+    waiting_manual    = "manual_task_type"  in ctx.user_data
+    adding_bouquet    = ctx.user_data.get("bouquet_cost_step") or ctx.user_data.get("adding_bouquet") or "bouquet_photo" in ctx.user_data
+
+    # Фото чека — только если явно ожидается или смена открыта без чека и нет других ожидающих состояний
     shift_needs_receipt = (
         user["role"] == "florist" and
         db.has_shift(user["id"], TODAY()) and
         not db.has_receipt(user["id"], TODAY()) and
-        "adding_bouquet" not in ctx.user_data and
-        "bouquet_photo" not in ctx.user_data and
-        "manual_task_type" not in ctx.user_data and
-        "pending_task_id" not in ctx.user_data
+        not waiting_task_photo and
+        not waiting_manual and
+        not adding_bouquet
     )
-    if "waiting_receipt" in ctx.user_data or shift_needs_receipt:
+    if waiting_receipt or shift_needs_receipt:
         florist_id = ctx.user_data.pop("waiting_receipt", user["id"])
         shift_date = ctx.user_data.pop("receipt_shift_date", TODAY())
         now_time   = NOWT()
@@ -419,6 +449,8 @@ async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await send_to_director(ctx.bot,
                 f"✅ {user['name']} открыла смену в {now_time} — вовремя",
                 photo=file_id)
+            # Отправить пропущенные задачи если смена открыта после времени задачи
+            await _send_missed_tasks(ctx.bot, user, now_time)
         else:
             label = LATE_LABELS.get(late_type, "опоздание")
             ym = datetime.now().strftime("%Y-%m")
@@ -444,6 +476,9 @@ async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 f"({label}, +{late_min} мин)\n"
                 f"Таких в месяце: {late_count} из {max_v}\n"
                 f"Отправляю информацию директору...")
+
+            # Отправить пропущенные задачи
+            await _send_missed_tasks(ctx.bot, user, now_time)
 
             # Директору — фото чека + кнопка «Ознакомлена»
             d = db.get_director()
@@ -959,39 +994,6 @@ async def cmd_test_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"Ошибка {f['name']}: {e}")
 
     await update.message.reply_text(f"Отправила {sent} алертов.")
-
-
-async def cmd_pravila(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Правила опозданий и штрафов для флориста."""
-    user = db.get_user(update.effective_user.id)
-    if not user:
-        return
-
-    max_light  = db.get_setting("kpi_late_light_max",  "5")
-    max_medium = db.get_setting("kpi_late_medium_max", "3")
-    max_heavy  = db.get_setting("kpi_late_heavy_max",  "2")
-
-    text = (
-        "Правила открытия смены и штрафы\n\n"
-        "Смена должна быть открыта до 10:03\n"
-        "Фото чека с терминала — обязательно\n\n"
-        "Шкала опозданий:\n\n"
-        "До 10:03 — вовремя, без штрафа\n\n"
-        "10:03–10:15 — лёгкое опоздание\n"
-        f"  Штраф: при {max_light}+ таких в месяц — 2 000 руб\n\n"
-        "10:15–10:30 — опоздание\n"
-        f"  Штраф: при {max_medium}+ таких в месяц — 2 000 руб\n\n"
-        "10:30–11:00 — серьёзное опоздание\n"
-        f"  Штраф: при {max_heavy}+ таких в месяц — 2 000 руб\n\n"
-        "После 11:00 или нет чека\n"
-        "  Штраф: 2 000 руб за каждый случай\n\n"
-        "KPI по опозданиям:\n"
-        f"  {max_light}+ лёгких — KPI не засчитан\n"
-        f"  {max_medium}+ средних — KPI не засчитан\n"
-        f"  {max_heavy}+ серьёзных — KPI не засчитан\n"
-        "  Любое после 11:00 — KPI не засчитан сразу"
-    )
-    await update.message.reply_text(text)
 
 
 async def cmd_pravila(update: Update, ctx: ContextTypes.DEFAULT_TYPE):

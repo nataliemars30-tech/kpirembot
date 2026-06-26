@@ -10,9 +10,11 @@ from claude_ai import ask_claude
 from config import REGISTER_NAME
 
 log = logging.getLogger(__name__)
-TODAY  = lambda: date.today().isoformat()
-NOW    = lambda: datetime.now().isoformat()
-NOWT   = lambda: datetime.now().strftime("%H:%M")
+import pytz as _pytz
+_MSK   = _pytz.timezone("Europe/Moscow")
+TODAY  = lambda: datetime.now(_MSK).date().isoformat()
+NOW    = lambda: datetime.now(_MSK).isoformat()
+NOWT   = lambda: datetime.now(_MSK).strftime("%H:%M")
 
 TASK_LABELS = {
     "vitrina_bouquets":     "Витрина готовых букетов",

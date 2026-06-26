@@ -1,92 +1,102 @@
+import logging
+from telegram import Update, BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, ConversationHandler
+import database as db
+import keyboards as kb
+from config import REGISTER_NAME
+from datetime import datetime
 
+log = logging.getLogger(__name__)
 
-Deployments
-Variables
-Metrics
-Console
-Settings
-Unexposed service
-3.13.14python@3.13.14
-US West
-1 Replica
-worker
-/
-Crashed
-Jun 26, 2026, 1:29 PM GMT+3
-Get Help
-Filter and search logs
-You reached the start of the range
-Jun 26, 2026, 1:29 PM
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Starting Container
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-Traceback (most recent call last):
-  File "/app/bot.py", line 19, in <module>
-    from scheduler import setup_scheduler
-  File "/app/scheduler.py", line 8, in <module>
-    from handlers import send_task, shift_prompt
-ImportError: cannot import name 'send_task' from 'handlers' (/app/handlers.py)
-You reached the end of the range
-Jun 26, 2026, 1:29 PM
+async def set_user_commands(bot, telegram_id, role):
+    try:
+        if role == "director":
+            cmds = [
+                BotCommand("otchet", "Полный отчёт"), BotCommand("kpi", "KPI флористов"),
+                BotCommand("prodazhi", "Продажи"), BotCommand("vitrina", "Букеты"),
+                BotCommand("nastroyki", "Настройки")
+            ]
+        else:
+            cmds = [
+                BotCommand("otkryt", "Открыть смену"), BotCommand("buket", "Добавить букет"),
+                BotCommand("vitrina", "Мои букеты"), BotCommand("moy_kpi", "Мой KPI"),
+                BotCommand("vitrina_bukety", "Отчёт витрины"), BotCommand("vitrina_komp", "Отчёт комп."),
+                BotCommand("flowwow_otchet", "Отчёт Flowwow"), BotCommand("pravila", "Правила и штрафы")
+            ]
+        await bot.set_my_commands(cmds, scope=BotCommandScopeChat(chat_id=telegram_id))
+    except Exception as e:
+        log.error(f"set_my_commands: {e}")
 
-Canvas loading slowly
+async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    user = db.get_user(update.effective_user.id)
+    if user:
+        await set_user_commands(ctx.bot, update.effective_user.id, user["role"])
+        await update.message.reply_text(f"Привет, {user['name']}!")
+        return ConversationHandler.END
+    await update.message.reply_text("Добро пожаловать! Как тебя зовут?")
+    return REGISTER_NAME
 
-The canvas is taking longer than expected to load. Please wait or try refreshing the page.
+async def register_name(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    name = update.message.text.strip()
+    tid = update.effective_user.id
+    director = db.get_director()
+    role = "director" if not director else "florist"
+    db.create_user(tid, name, role)
+    await set_user_commands(ctx.bot, tid, role)
+    await update.message.reply_text(f"{name}, ты зарегистрирована как {role}!")
+    return ConversationHandler.END
+
+async def send_task(bot, florist, task_type, scheduled_time):
+    today = datetime.now().date().isoformat()
+    if db.get_pending_task(florist["id"], task_type, today): return
+    if not db.has_shift(florist["id"], today): return
+    task_id = db.create_task(task_type, florist["id"], today, scheduled_time)
+    texts = {
+        "vitrina_bouquets": "14:00 — Витрина готовых букетов!\nПришли фото:",
+        "vitrina_compositions": "18:00 — Витрина готовых композиций!\nПришли фото:",
+        "flowwow": "15:00 — Пора обновить Flowwow!\nПришли фото:",
+    }
+    try:
+        msg = await bot.send_message(florist["telegram_id"], texts.get(task_type, "Задача"), reply_markup=kb.task_response_kb(task_id, task_type))
+        db.update_task(task_id, florist_msg_id=msg.message_id)
+    except Exception as e:
+        log.error(e)
+
+async def shift_prompt(bot, florists):
+    for f in florists:
+        if not db.has_shift(f["id"], datetime.now().date().isoformat()):
+            try:
+                await bot.send_message(f["telegram_id"], "Доброе утро! Пора открывать смену:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"🟢 Начать смену — {f['name']}", callback_data=f"shift:{f['id']}")]]))
+            except Exception as e:
+                log.error(e)
+
+async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Фото получено.")
+
+async def cmd_pravila(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Правила и статистика штрафов...")
+
+async def callback_handler(update, ctx): pass
+async def text_handler(update, ctx): pass
+async def cmd_otkryt(update, ctx): pass
+async def cmd_bukет(update, ctx): pass
+async def cmd_vitrina(update, ctx): pass
+async def cmd_my_kpi(update, ctx): pass
+async def cmd_report(update, ctx): pass
+async def cmd_kpi(update, ctx): pass
+async def cmd_sales(update, ctx): pass
+async def cmd_settings(update, ctx): pass
+async def cmd_reset_users(update, ctx): pass
+async def cmd_migrate_db(update, ctx): pass
+async def cmd_debug(update, ctx): pass
+async def cmd_test_alert(update, ctx): pass
+async def cmd_test_smena(update, ctx): pass
+async def cmd_test_vitrina(update, ctx): pass
+async def cmd_test_komp(update, ctx): pass
+async def cmd_test_flowwow(update, ctx): pass
+async def cmd_test_buket4(update, ctx): pass
+async def cmd_test_buket6(update, ctx): pass
+async def cmd_test_reminder(update, ctx): pass
+async def cmd_manual_vitrina_bukety(update, ctx): pass
+async def cmd_manual_vitrina_komp(update, ctx): pass
+async def cmd_manual_flowwow(update, ctx): pass

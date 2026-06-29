@@ -78,7 +78,9 @@ def settings_kpi_kb():
         [InlineKeyboardButton("Витрина — макс Норм", callback_data="setval:kpi_vitrina_max_norm")],
         [InlineKeyboardButton("Flowwow — макс пропусков", callback_data="setval:kpi_flowwow_max_skips")],
         [InlineKeyboardButton("Flowwow — макс Норм", callback_data="setval:kpi_flowwow_max_norm")],
-        [InlineKeyboardButton("Букеты — макс Плохо", callback_data="setval:kpi_bouquet_max_bad")],
+        [InlineKeyboardButton("Букеты — макс Плохо",[InlineKeyboardButton("⏰ Опоздания лёгкие (макс)", callback_data="setval:kpi_late_light_max")],
+        [InlineKeyboardButton("⏰ Опоздания средние (макс)", callback_data="setval:kpi_late_medium_max")],
+        [InlineKeyboardButton("⏰ Опоздания серьёзные (макс)", callback_data="setval:kpi_late_heavy_max")], callback_data="setval:kpi_bouquet_max_bad")],
         [InlineKeyboardButton("« Назад", callback_data="settings:main")],
     ])
 

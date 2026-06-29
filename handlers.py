@@ -814,10 +814,10 @@ async def cmd_vitrina(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not bouquets:
         await update.message.reply_text("Активных букетов в витрине нет.")
         return
-    now = datetime.now()
+    import pytz as _ptz; _msk = _ptz.timezone("Europe/Moscow"); now = datetime.now(_msk)
     await update.message.reply_text(f"Активных букетов в витрине: {len(bouquets)} шт.")
     for b in bouquets:
-        created = datetime.fromisoformat(b["created_at"])
+        created = _msk.localize(datetime.fromisoformat(b["created_at"])) if datetime.fromisoformat(b["created_at"]).tzinfo is None else datetime.fromisoformat(b["created_at"])
         days    = (now - created).days
         warn    = " ⚠️ Проверить!" if days >= 4 else ""
         caption = (f"Букет #{b['id']}\n"

@@ -307,7 +307,7 @@ def get_pending_task(user_id, task_type, date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT * FROM tasks WHERE assigned_to=%s AND type=%s AND date=%s "
-        "AND status IN ('pending','in_hour')",
+        "AND status IN ('pending')",
         (user_id, task_type, date))
     row = _one(cur); cur.close(); conn.close()
     return row

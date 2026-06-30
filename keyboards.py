@@ -117,7 +117,6 @@ def settings_florists_kb(florists):
     buttons.append([InlineKeyboardButton("« Назад", callback_data="settings:main")])
     return InlineKeyboardMarkup(buttons)
 
-
 def flowwow_copy_kb(task_id):
     """Кнопки для отчёта копирования букетов на Flowwow."""
     return InlineKeyboardMarkup([[

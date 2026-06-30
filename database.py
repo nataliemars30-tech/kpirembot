@@ -42,7 +42,6 @@ def init_db():
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         schedule_start_date TEXT
     )""")
-    )""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS shifts (
         id SERIAL PRIMARY KEY,

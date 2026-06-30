@@ -39,7 +39,9 @@ def init_db():
         name TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'florist',
         active INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        schedule_start_date TEXT
+    )""")
     )""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS shifts (
@@ -107,6 +109,7 @@ def init_db():
         "ALTER TABLE shifts ADD COLUMN IF NOT EXISTS fridge_photo2 TEXT",
         "ALTER TABLE shifts ADD COLUMN IF NOT EXISTS closed_at TEXT",
         "ALTER TABLE bouquets ADD COLUMN IF NOT EXISTS cost INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS schedule_start_date TEXT",
         "ALTER TABLE bouquets ADD COLUMN IF NOT EXISTS sold_price INTEGER",
     ]
     for sql in migrations:
@@ -238,6 +241,22 @@ def has_receipt(user_id, date):
     cur.close(); conn.close()
     return result
 
+def is_scheduled_today(florist, date_str):
+    """Проверяет рабочий ли день у флориста по графику 2/2."""
+    start = florist.get("schedule_start_date")
+    if not start:
+        return True  # если график не задан — считаем рабочим всегда
+    from datetime import date as _date
+    d0 = _date.fromisoformat(start)
+    d1 = _date.fromisoformat(date_str)
+    diff = (d1 - d0).days
+    return diff >= 0 and diff % 2 == 0
+
+
+def get_scheduled_florists(date_str):
+    """Все флористы у кого сегодня рабочий день по графику."""
+    all_florists = get_florists()
+    return [f for f in all_florists if is_scheduled_today(f, date_str)]
 def get_working_florists(date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(

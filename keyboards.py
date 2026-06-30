@@ -61,6 +61,8 @@ def settings_main_kb():
         [InlineKeyboardButton("🌹 Срок годности букета", callback_data="settings:bouquet")],
         [InlineKeyboardButton("💼 Накладные расходы %", callback_data="setval:overhead_pct")],
         [InlineKeyboardButton("⏱ Время ожидания ответа", callback_data="setval:timeout_minutes")],
+        [InlineKeyboardButton("👤 Флористы и график", callback_data="settings:florists")],
+    ])
     ])
 
 def settings_times_kb():
@@ -113,6 +115,10 @@ def settings_florists_kb(florists):
         buttons.append([InlineKeyboardButton(
             f"{'✅' if f['active'] else '❌'} {f['name']} — {status}",
             callback_data=f"florist_toggle:{f['id']}"
+        )])
+        buttons.append([InlineKeyboardButton(
+            f"📅 График {f['name']}",
+            callback_data=f"florist_schedule:{f['id']}"
         )])
     buttons.append([InlineKeyboardButton("« Назад", callback_data="settings:main")])
     return InlineKeyboardMarkup(buttons)

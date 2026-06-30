@@ -371,6 +371,17 @@ def count_active_bouquets():
     return row[0] if row else 0
 
 
+def get_shift(user_id, date):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT * FROM shifts WHERE user_id=%s AND date=%s", (user_id, date))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return {}
+    cols = [d[0] for d in cur.description]
+    result = dict(zip(cols, row))
+    cur.close(); conn.close()
+    return result
 def has_shift_closed(user_id, date):
     """Проверяет закрыта ли смена."""
     conn = get_conn(); cur = conn.cursor()

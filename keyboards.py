@@ -63,7 +63,6 @@ def settings_main_kb():
         [InlineKeyboardButton("⏱ Время ожидания ответа", callback_data="setval:timeout_minutes")],
         [InlineKeyboardButton("👤 Флористы и график", callback_data="settings:florists")],
     ])
-    ])
 
 def settings_times_kb():
     return InlineKeyboardMarkup([

@@ -232,8 +232,6 @@ def update_user(user_id, **kwargs):
     conn.commit(); cur.close(); conn.close()
 
 def has_shift(user_id, date):
-
-def has_shift(user_id, date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT id FROM shifts WHERE user_id=%s AND date=%s", (user_id, date))
     row = _one(cur); cur.close(); conn.close()

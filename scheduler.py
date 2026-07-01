@@ -99,13 +99,12 @@ async def job_shift_reminder(app):
                 log.error(f"[shift_reminder] ERROR sending receipt to {f['name']}: {e}")
             director_msg = f"{f['name']} — нет фото чека"
 
-        # Директору каждый раз
-        if director:
+    # Директору только если смена открыта но нет чека
+        if director and has_s and not has_r:
             try:
                 await app.bot.send_message(director["telegram_id"], director_msg)
             except Exception as e:
                 log.error(e)
-
 
 # ── Задачи ────────────────────────────────────────────────
 

@@ -72,21 +72,22 @@ async def job_shift_reminder(app):
         log.info(f"[shift_reminder] {f['name']} will send message")
         from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-        if not has_s:
-            # Смена не открыта — отправляем с кнопкой
-            try:
-                await app.bot.send_message(
-                    f["telegram_id"],
-                    "Открой смену!",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(
-                            f"Начать смену — {f['name']}",
-                            callback_data=f"shift:{f['id']}")
-                    ]])
-                )
-                log.info(f"[shift_reminder] sent open_shift to {f['name']}")
-            except Exception as e:
-                log.error(f"[shift_reminder] ERROR sending to {f['name']}: {e}")
+    if not has_s:
+            # Смена не открыта — только в первые 5 минут (10:00-10:05)
+            if t <= shift_min + 5:
+                try:
+                    await app.bot.send_message(
+                        f["telegram_id"],
+                        "Открой смену!",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(
+                                f"Начать смену — {f['name']}",
+                                callback_data=f"shift:{f['id']}")
+                        ]])
+                    )
+                    log.info(f"[shift_reminder] sent open_shift to {f['name']}")
+                except Exception as e:
+                    log.error(f"[shift_reminder] ERROR sending to {f['name']}: {e}")
             director_msg = f"{f['name']} не открыла смену"
         else:
             # Смена открыта но нет чека

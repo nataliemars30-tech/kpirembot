@@ -721,6 +721,13 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     # Причина невыполнения задачи
+    if "setting_schedule_florist" in ctx.user_data:
+        florist_id = ctx.user_data.pop("setting_schedule_florist")
+        db.update_user(florist_id, schedule_start_date=text.strip())
+        fl = db.get_user_by_id(florist_id)
+        await update.message.reply_text(
+            f"✅ График {fl['name']} установлен с {text.strip()}")
+        return
     if "reason_task_id" in ctx.user_data:
         task_id = ctx.user_data.pop("reason_task_id")
         db.update_task(task_id, no_reason=text, status="no")

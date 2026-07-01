@@ -55,7 +55,7 @@ async def job_shift_reminder(app):
         return
 
     director = db.get_director()
-    florists = db.get_scheduled_florists(today)
+    florists = db.get_florists()
     log.info(f"[shift_reminder] t={t} shift_min={shift_min} florists={len(florists)}")
 
     for f in florists:

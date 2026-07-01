@@ -218,17 +218,20 @@ def start_shift(user_id, date):
 
 def update_shift(user_id, date, **kwargs):
     conn = get_conn(); cur = conn.cursor()
-    def update_user(user_id, **kwargs):
+    sets = ", ".join(f"{k}=%s" for k in kwargs)
+    vals = list(kwargs.values()) + [user_id, date]
+    cur.execute(f"UPDATE shifts SET {sets} WHERE user_id=%s AND date=%s", vals)
+    conn.commit(); cur.close(); conn.close()
+
+def update_user(user_id, **kwargs):
     if not kwargs: return
     conn = get_conn(); cur = conn.cursor()
     sets = ", ".join(f"{k}=%s" for k in kwargs)
     cur.execute(f"UPDATE users SET {sets} WHERE id=%s",
                 (*kwargs.values(), user_id))
     conn.commit(); cur.close(); conn.close()
-    sets = ", ".join(f"{k}=%s" for k in kwargs)
-    vals = list(kwargs.values()) + [user_id, date]
-    cur.execute(f"UPDATE shifts SET {sets} WHERE user_id=%s AND date=%s", vals)
-    conn.commit(); cur.close(); conn.close()
+
+def has_shift(user_id, date):
 
 def has_shift(user_id, date):
     conn = get_conn(); cur = conn.cursor()

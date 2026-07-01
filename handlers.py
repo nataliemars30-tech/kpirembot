@@ -437,6 +437,15 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"{fl['name']} {status}.",
             reply_markup=kb.settings_florists_kb(db.get_florists(active_only=False)))
 
+    elif data.startswith("florist_schedule:"):
+        florist_id = int(data.split(":")[1])
+        fl = db.get_user_by_id(florist_id)
+        await q.message.edit_text(
+            f"Введи дату первой рабочей смены {fl['name']} в формате ГГГГ-ММ-ДД\n"
+            f"Например: 2026-07-01",
+            reply_markup=None)
+        ctx.user_data["setting_schedule_florist"] = florist_id
+        
     elif data.startswith("settings:"):
         section = data.split(":")[1]
         if section == "main":

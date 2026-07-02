@@ -125,7 +125,15 @@ async def job_vitrina_compositions(app):
 
 
 async def job_flowwow(app):
-    today   = today_msk()
+    today = today_msk()
+    start = db.get_setting("flowwow_start_date", today)
+    from datetime import date as _date
+    try:
+        diff = (_date.fromisoformat(today) - _date.fromisoformat(start)).days
+    except Exception:
+        diff = 0
+    if diff % 2 != 0:
+        return  # не день Flowwow — сегодня «через день»
     workers = db.get_working_florists(today)
     t_str   = db.get_setting("flowwow_time", "13:00")
     for f in workers:

@@ -1410,20 +1410,25 @@ async def cmd_sales(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines = [f"Продажи и прибыль — {ym}\n"]
         total_rev = 0; total_profit = 0
         for f in db.get_florists():
-            bouquets = db.get_month_bouquets(ym, f["id"])
+            bouquets     = db.get_month_bouquets(ym, f["id"])
+            compositions = db.get_month_compositions(ym, f["id"])
             lines.append(format_sales_report(bouquets, f["name"], pct))
+            lines.append(format_sales_report(compositions, f["name"] + " (композиции)", pct))
             lines.append("")
-            for b in bouquets:
-                if b["status"] in ("sold_studio","sold_flowwow","sold_discount"):
-                    sp = b.get("sold_price") or b.get("price") or 0
-                    sc = b.get("cost") or 0
+            for item in bouquets + compositions:
+                if item["status"] in ("sold_studio","sold_flowwow","sold_discount"):
+                    sp = item.get("sold_price") or item.get("price") or 0
+                    sc = item.get("cost") or 0
                     total_rev    += sp
                     total_profit += sp - sc - int(sc * pct / 100)
         lines.append(f"ИТОГО:\nВыручка: {total_rev:,} ₽\nПрибыль: ~{total_profit:,} ₽".replace(",", " "))
         await update.message.reply_text("\n".join(lines))
     else:
-        bouquets = db.get_month_bouquets(ym, user["id"])
-        await update.message.reply_text(format_sales_report(bouquets, user["name"], pct))
+        bouquets     = db.get_month_bouquets(ym, user["id"])
+        compositions = db.get_month_compositions(ym, user["id"])
+        await update.message.reply_text(
+            format_sales_report(bouquets, user["name"], pct) + "\n\n" +
+            format_sales_report(compositions, user["name"] + " (композиции)", pct))
 
 
 async def cmd_settings(update: Update, ctx: ContextTypes.DEFAULT_TYPE):

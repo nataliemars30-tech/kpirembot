@@ -1013,14 +1013,19 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"Кому: {fl['name'] if fl else '—'}")
         if assigned_to != created_by:
             creator = db.get_user_by_id(created_by)
-            await send_to_director(ctx.bot,
-                f"📝 Новая разовая задача от {creator['name'] if creator else 'директора'}\n"
-                f"«{title}» · {TASK_DIFFICULTY_LABELS.get(difficulty, difficulty)} · {task_date} {scheduled_time}{mand_txt}\n"
-                f"Кому: {fl['name'] if fl else '—'}")
+            if fl:
+                try:
+                    await ctx.bot.send_message(fl["telegram_id"],
+                        f"📝 Тебе поставили новую задачу\n"
+                        f"«{title}» · {TASK_DIFFICULTY_LABELS.get(difficulty, difficulty)} · {task_date} {scheduled_time}{mand_txt}\n"
+                        f"От: {creator['name'] if creator else 'директора'}\n"
+                        f"Напоминание придёт в назначенное время.")
+                except Exception as e:
+                    log.error(e)
         else:
             await send_to_director(ctx.bot,
                 f"📝 {fl['name'] if fl else 'Флорист'} поставила себе задачу\n"
-                f"«{title}» · {TASK_DIFFICULTY_LABELS.get(difficulty, difficulty)} · {scheduled_time}")
+                f"«{title}» · {TASK_DIFFICULTY_LABELS.get(difficulty, difficulty)} · {task_date} {scheduled_time}{mand_txt}")
         return
 
     # Себестоимость и цена букета одним сообщением
@@ -1221,6 +1226,24 @@ async def cmd_new_task(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         ctx.user_data["new_task_assigned_to"] = user["id"]
         ctx.user_data["new_task_created_by"]  = user["id"]
         await update.message.reply_text("Опиши задачу:")
+
+
+async def cmd_view_tasks(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Просмотр открытых разовых задач — /zadachi."""
+    user = db.get_user(update.effective_user.id)
+    if not user:
+        return
+    tasks = db.get_open_tasks() if user["role"] == "director" else db.get_open_tasks(user["id"])
+    if not tasks:
+        await update.message.reply_text("Открытых задач нет 🌸")
+        return
+    lines = ["📋 Открытые задачи:\n"]
+    for t in tasks:
+        diff = TASK_DIFFICULTY_LABELS.get(t.get("difficulty") or "normal", "")
+        mand = " 🔴 обязательно день в день" if t.get("mandatory") else ""
+        who  = f" · {t['florist_name']}" if user["role"] == "director" else ""
+        lines.append(f"«{t.get('title') or '—'}»{who}\n  {t['date']} {t['scheduled_time']} · {diff}{mand}\n")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def cmd_bukет(update: Update, ctx: ContextTypes.DEFAULT_TYPE):

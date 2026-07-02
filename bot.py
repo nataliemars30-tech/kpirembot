@@ -16,7 +16,7 @@ from handlers import (
     cmd_test_smena, cmd_test_vitrina, cmd_test_komp,
     cmd_test_flowwow, cmd_test_buket4, cmd_test_buket6, cmd_test_kompoziciya4, cmd_test_reminder,
     cmd_reset_users, cmd_migrate_db, cmd_debug, cmd_test_alert, cmd_pravila, cmd_reset_tasks,
-    cmd_zakryt, cmd_new_task, cmd_chasy,
+    cmd_zakryt, cmd_new_task, cmd_chasy, cmd_view_tasks,
 )
 from scheduler import setup_scheduler
 
@@ -37,6 +37,7 @@ def main():
     app.add_handler(CommandHandler("zakryt",         cmd_zakryt))
     app.add_handler(CommandHandler("zadacha",        cmd_new_task))
     app.add_handler(CommandHandler("chasy",          cmd_chasy))
+    app.add_handler(CommandHandler("zadachi",        cmd_view_tasks))
     app.add_handler(CommandHandler("buket",          cmd_bukет))
     app.add_handler(CommandHandler("vitrina",        cmd_vitrina))
     app.add_handler(CommandHandler("kompoziciya",    cmd_kompoziciya))
@@ -73,6 +74,7 @@ def main():
             BotCommand("otkryt",      "Открыть смену"),
             BotCommand("zakryt",      "Закрыть смену"),
             BotCommand("zadacha",     "Поставить себе задачу"),
+            BotCommand("zadachi",     "Мои открытые задачи"),
             BotCommand("buket",       "Добавить букет"),
             BotCommand("vitrina",     "Активные букеты"),
             BotCommand("kompoziciya", "Добавить композицию"),
@@ -80,12 +82,31 @@ def main():
             BotCommand("moy_kpi",     "Мой KPI"),
             BotCommand("pravila",     "Правила"),
         ]
+        director_commands = [
+            BotCommand("zadacha",     "Поставить задачу"),
+            BotCommand("zadachi",     "Все открытые задачи"),
+            BotCommand("chasy",       "Часы и переработки"),
+            BotCommand("kpi",         "KPI флористов"),
+            BotCommand("otchet",      "Отчёт"),
+            BotCommand("prodazhi",    "Продажи"),
+            BotCommand("vitrina",     "Активные букеты"),
+            BotCommand("kompozicii",  "Активные композиции"),
+            BotCommand("nastroyki",   "Настройки"),
+        ]
         import database as db
         for f in db.get_florists():
             try:
                 await app.bot.set_my_commands(
                     florist_commands,
                     scope=BotCommandScopeChat(chat_id=f["telegram_id"]))
+            except Exception:
+                pass
+        director = db.get_director()
+        if director:
+            try:
+                await app.bot.set_my_commands(
+                    director_commands,
+                    scope=BotCommandScopeChat(chat_id=director["telegram_id"]))
             except Exception:
                 pass
     app.post_init = set_commands

@@ -456,9 +456,32 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # Разовая задача — не сделано
     elif data.startswith("mtask_no:"):
         task_id = int(data.split(":")[1])
+        task = db.get_task(task_id)
+        if not task: return
         db.update_task(task_id, status="no")
-        await safe_edit(q, "Понятно. Напиши причину:")
+        await safe_edit(q, "Понятно. Напиши причину — почему не получилось:")
         ctx.user_data["reason_task_id"] = task_id
+        fl = db.get_user_by_id(task["assigned_to"])
+        await send_to_director(ctx.bot,
+            f"❌ {fl['name'] if fl else '?'} нажала «Не сделано»\n"
+            f"«{task.get('title') or '—'}» — ждём причину")
+
+    # Разовая задача — снуз (30 мин или час)
+    elif data.startswith("mtask_snooze:"):
+        _, minutes, task_id = data.split(":")
+        minutes, task_id = int(minutes), int(task_id)
+        task = db.get_task(task_id)
+        if not task: return
+        from datetime import datetime as _dt, timedelta as _td
+        import pytz as _ptz
+        _msk = _ptz.timezone("Europe/Moscow")
+        snooze_until = (_dt.now(_msk) + _td(minutes=minutes)).strftime("%H:%M")
+        db.update_task(task_id, snoozed_until=snooze_until, sent_at=None)
+        await safe_edit(q, f"⏰ Напомню в {snooze_until}")
+        fl = db.get_user_by_id(task["assigned_to"])
+        await send_to_director(ctx.bot,
+            f"⏰ {fl['name'] if fl else '?'} отложила задачу на {minutes} мин\n"
+            f"«{task.get('title') or '—'}» — напомню в {snooze_until}")
 
     # Разовая задача — перенести на завтра
     elif data.startswith("mtask_move:"):
@@ -467,12 +490,44 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if not task: return
         from datetime import date as _date, timedelta as _td
         new_date = (_date.fromisoformat(task["date"]) + _td(days=1)).isoformat()
-        db.update_task(task_id, date=new_date, sent_at=None, status="pending")
+        db.update_task(task_id, date=new_date, sent_at=None, snoozed_until=None, status="pending")
         await safe_edit(q, f"📅 «{task.get('title') or 'Задача'}» перенесена на {new_date}")
         fl = db.get_user_by_id(task["assigned_to"])
         await send_to_director(ctx.bot,
             f"📅 {fl['name'] if fl else '?'} перенесла задачу «{task.get('title') or '—'}» на {new_date}")
 
+    # Оценка причины «Не сделано» директором
+    elif data.startswith("reason_rate:"):
+        _, rating, task_id = data.split(":")
+        task_id = int(task_id)
+        if not is_director(q.from_user.id): return
+        task = db.get_task(task_id)
+        if not task: return
+        db.update_task(task_id, reason_rating=rating)
+        fl = db.get_user_by_id(task["assigned_to"])
+        if rating == "bad":
+            await safe_edit(q, f"👎 Оценка «Плохо» — минус KPI для {fl['name'] if fl else '?'}")
+            if fl:
+                await ctx.bot.send_message(fl["telegram_id"],
+                    f"⚠️ Директор оценила твою причину по задаче «{task.get('title') or '—'}»\n"
+                    f"Оценка: 👎 Плохо — это минус в KPI.\nОзнакомься и нажми подтверждение.",
+                    reply_markup=kb.task_ack_kb(task_id))
+        else:
+            await safe_edit(q, f"👌 Оценка «Норм» — KPI без изменений для {fl['name'] if fl else '?'}")
+            if fl:
+                await ctx.bot.send_message(fl["telegram_id"],
+                    f"Директор оценила причину по задаче «{task.get('title') or '—'}»\n"
+                    f"Оценка: 👌 Норм — KPI без изменений.",
+                    reply_markup=kb.task_ack_kb(task_id))
+
+    # Флорист ознакомилась с оценкой
+    elif data.startswith("task_ack:"):
+        task_id = int(data.split(":")[1])
+        task = db.get_task(task_id)
+        db.update_task(task_id, status="ack")
+        await safe_edit(q, "✅ Ознакомлена")
+        await send_to_director(ctx.bot,
+            f"✅ {q.from_user.first_name} ознакомилась с оценкой по задаче «{task.get('title') if task else '—'}»")
     # Настройки
     elif data.startswith("fcopy:"):
         parts    = data.split(":")

@@ -511,6 +511,13 @@ def update_composition(composition_id, **kwargs):
     cur.execute(f"UPDATE compositions SET {sets} WHERE id=%s", vals)
     conn.commit(); cur.close(); conn.close()
 
+def count_active_bouquets():
+    """Считает количество активных букетов на витрине."""
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM bouquets WHERE status='in_vitrina'")
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row[0] if row else 0
 def count_active_compositions():
     """Считает количество активных композиций на витрине."""
     conn = get_conn(); cur = conn.cursor()

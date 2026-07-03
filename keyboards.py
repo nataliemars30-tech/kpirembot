@@ -219,3 +219,15 @@ def close_shift_kb(florist_id):
     return InlineKeyboardMarkup([[
         InlineKeyboardButton("🔒 Закрыть смену", callback_data=f"close_shift:{florist_id}")
     ]])
+def reason_rate_kb(task_id):
+    """Директор оценивает причину 'не сделано'."""
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("👎 Плохо — минус KPI", callback_data=f"reason_rate:bad:{task_id}"),
+        InlineKeyboardButton("👌 Норм", callback_data=f"reason_rate:ok:{task_id}"),
+    ]])
+
+def task_ack_kb(task_id):
+    """Флорист подтверждает ознакомление с оценкой."""
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ Ознакомлена", callback_data=f"task_ack:{task_id}"),
+    ]])

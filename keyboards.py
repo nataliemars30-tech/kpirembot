@@ -43,6 +43,8 @@ def custom_task_kb(task_id):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Сделано", callback_data=f"mtask_done:{task_id}")],
         [InlineKeyboardButton("❌ Не сделано", callback_data=f"mtask_no:{task_id}")],
+        [InlineKeyboardButton("⏰ Через 30 мин", callback_data=f"mtask_snooze:30:{task_id}"),
+         InlineKeyboardButton("⏰ Через час", callback_data=f"mtask_snooze:60:{task_id}")],
         [InlineKeyboardButton("📅 Перенести на завтра", callback_data=f"mtask_move:{task_id}")],
     ])
 

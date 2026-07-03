@@ -988,17 +988,20 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ График {fl['name']} установлен с {text.strip()}")
         return
-    if "reason_task_id" in ctx.user_data:
+  if "reason_task_id" in ctx.user_data:
         task_id = ctx.user_data.pop("reason_task_id")
-        db.update_task(task_id, no_reason=text, status="no")
-        await update.message.reply_text("Записала.")
         task = db.get_task(task_id)
+        db.update_task(task_id, no_reason=text, task_reason=text, status="no")
+        await update.message.reply_text("Записала. Директор получит причину и оценит.")
         if task and task["type"] == "custom":
             label = task.get("title") or "разовая задача"
+            await send_to_director(ctx.bot,
+                f"❌ {user['name']} не выполнила задачу\n«{label}»\nПричина: {text}\n\nОцени:",
+                reply_markup=kb.reason_rate_kb(task_id))
         else:
             label = TASK_LABELS.get(task["type"], task["type"]) if task else "задача"
-        await send_to_director(ctx.bot,
-            f"❌ Задача не выполнена — {user['name']}\n{label}\nПричина: {text}")
+            await send_to_director(ctx.bot,
+                f"❌ Задача не выполнена — {user['name']}\n{label}\nПричина: {text}")
         return
 
     # Разовая задача — текст задачи

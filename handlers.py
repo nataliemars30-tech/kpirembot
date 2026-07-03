@@ -988,7 +988,7 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ График {fl['name']} установлен с {text.strip()}")
         return
-  if "reason_task_id" in ctx.user_data:
+      if "reason_task_id" in ctx.user_data:
         task_id = ctx.user_data.pop("reason_task_id")
         task = db.get_task(task_id)
         db.update_task(task_id, no_reason=text, task_reason=text, status="no")

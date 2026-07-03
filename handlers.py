@@ -936,7 +936,7 @@ async def photo_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     # Букет — фото
-    if ctx.user_data.get("adding_bouquet"):
+        if ctx.user_data.get("adding_bouquet"):
         ctx.user_data["bouquet_photo"]    = file_id
         ctx.user_data["adding_bouquet"]   = False
         ctx.user_data["bouquet_cost_step"] = True

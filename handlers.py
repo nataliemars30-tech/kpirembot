@@ -1109,12 +1109,16 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"Себестоимость: {cost:,} ₽\nЦена: {price:,} ₽".replace(",", " "),
             reply_markup=kb.bouquet_status_kb(bouquet_id))
         d = db.get_director()
-        if d:
-            await ctx.bot.send_photo(d["telegram_id"], photo=photo,
-                caption=f"🌸 Новый букет #{bouquet_id}\n"
-                        f"Флорист: {user['name']}\n"
-                        f"Себестоимость: {cost:,} ₽ · Цена: {price:,} ₽\n\nОцени:".replace(",", " "),
-                reply_markup=kb.bouquet_rating_kb(bouquet_id))
+     if d:
+            caption = (f"🌸 Новый букет #{bouquet_id}\n"
+                       f"Флорист: {user['name']}\n"
+                       f"Себестоимость: {cost:,} ₽ · Цена: {price:,} ₽\n\nОцени:".replace(",", " "))
+            if photo:
+                await ctx.bot.send_photo(d["telegram_id"], photo=photo,
+                    caption=caption, reply_markup=kb.bouquet_rating_kb(bouquet_id))
+            else:
+                await ctx.bot.send_message(d["telegram_id"], caption,
+                    reply_markup=kb.bouquet_rating_kb(bouquet_id))
         return
 
     # Себестоимость и цена композиции одним сообщением
@@ -1141,11 +1145,15 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=kb.composition_status_kb(composition_id))
         d = db.get_director()
         if d:
-            await ctx.bot.send_photo(d["telegram_id"], photo=photo,
-                caption=f"🎋 Новая композиция #{composition_id}\n"
-                        f"Флорист: {user['name']}\n"
-                        f"Себестоимость: {cost:,} ₽ · Цена: {price:,} ₽\n\nОцени:".replace(",", " "),
-                reply_markup=kb.composition_rating_kb(composition_id))
+            caption = (f"🎋 Новая композиция #{composition_id}\n"
+                       f"Флорист: {user['name']}\n"
+                       f"Себестоимость: {cost:,} ₽ · Цена: {price:,} ₽\n\nОцени:".replace(",", " "))
+            if photo:
+                await ctx.bot.send_photo(d["telegram_id"], photo=photo,
+                    caption=caption, reply_markup=kb.composition_rating_kb(composition_id))
+            else:
+                await ctx.bot.send_message(d["telegram_id"], caption,
+                    reply_markup=kb.composition_rating_kb(composition_id))
         return
 
     # Новая цена продажи (скидка или Flowwow)

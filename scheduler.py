@@ -333,55 +333,103 @@ async def job_bouquet_check_6day(app):
 
 # ── Композиции ───────────────────────────────────────────────
 
-async def job_composition_check_4day(app):
-    """Срок годности композиции строго 4 дня — уведомляем флориста и директора «разобрать»."""
-    days         = int(db.get_setting("composition_check_days", "4"))
-    compositions = db.get_compositions_for_check(days, "sent_4day")
-    director     = db.get_director()
-    import keyboards as kb
-    for c in compositions:
-        try:
-            caption = (f"Композиции #{c['id']} уже {days} дня — срок годности истёк!\n"
-                       f"Цена: {c['price']:,} ₽ · Пора разобрать.".replace(",", " "))
-            fl = db.get_user_by_id(c["florist_id"])
-            if not fl:
-                continue
-            if c.get("photo_file_id"):
-                await app.bot.send_photo(fl["telegram_id"],
-                    photo=c["photo_file_id"], caption=caption,
-                    reply_markup=kb.composition_check_kb(c["id"]))
-            else:
-                await app.bot.send_message(fl["telegram_id"], caption,
-                    reply_markup=kb.composition_check_kb(c["id"]))
-            db.update_composition(c["id"], sent_4day=1)
-            if director:
-                await app.bot.send_message(director["telegram_id"],
-                    f"Напомнила {c['florist_name']} разобрать композицию #{c['id']} ({days} дня, срок истёк)")
-        except Exception as e:
-            log.error(e)
-
-
-# ── Разовые задачи ───────────────────────────────────────────
-
 async def job_custom_tasks(app):
-    """Каждые 5 минут — отправляет разовые задачи, время которых уже наступило."""
+    """Каждые 5 минут:
+    - Отправляет новые задачи, время которых наступило
+    - Повторяет напоминание каждые 10 мин если нет ответа
+    - Через 3 часа молчания просит написать причину
+    - Считает витрину, если < 6 — предупреждение
+    """
     import keyboards as kb
-    today = today_msk()
-    now_t = now_msk().strftime("%H:%M")
-    due   = db.get_due_custom_tasks(today, now_t)
+    from datetime import datetime as _dt, timedelta as _td
+    import pytz as _ptz
+    _msk   = _ptz.timezone("Europe/Moscow")
+    now    = now_msk()
+    today  = today_msk()
+    now_t  = now.strftime("%H:%M")
+    director = db.get_director()
+
+    # 1. Отправить новые задачи (или снуз-задачи)
+    due = db.get_due_custom_tasks(today, now_t)
     for t in due:
         try:
             fl = db.get_user_by_id(t["assigned_to"])
-            if not fl:
-                continue
+            if not fl: continue
             diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
             mand_txt = " 🔴 ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
             await app.bot.send_message(fl["telegram_id"],
                 f"{diff_emoji} Задача: {t.get('title') or '—'}{mand_txt}",
                 reply_markup=kb.custom_task_kb(t["id"]))
-            db.update_task(t["id"], sent_at=now_msk().isoformat())
+            db.update_task(t["id"], sent_at=now.isoformat(), snoozed_until=None)
         except Exception as e:
             log.error(e)
+
+    # 2. Повторы каждые 10 мин для задач без ответа
+    conn = db.get_conn(); cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM tasks WHERE type='custom' AND date=%s
+        AND status='pending' AND sent_at IS NOT NULL AND snoozed_until IS NULL
+    """, (today,))
+    pending = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
+    cur.close(); conn.close()
+
+    for t in pending:
+        try:
+            sent_at = _dt.fromisoformat(t["sent_at"])
+            if sent_at.tzinfo is None:
+                sent_at = _msk.localize(sent_at)
+            elapsed = (now - sent_at).total_seconds() / 60
+
+            # Через 3 часа — запросить причину (один раз)
+            if elapsed >= 180 and not t.get("reason_3h_sent"):
+                fl = db.get_user_by_id(t["assigned_to"])
+                if fl:
+                    await app.bot.send_message(fl["telegram_id"],
+                        f"⚠️ Задача «{t.get('title') or '—'}» не выполнена уже 3 часа.\n"
+                        f"Напиши причину — почему не успеваешь:")
+                    ctx_data_key = f"reason_3h_{t['id']}"
+                db.update_task(t["id"], reason_3h_sent=1)
+                if director:
+                    fl = db.get_user_by_id(t["assigned_to"])
+                    await app.bot.send_message(director["telegram_id"],
+                        f"🔴 {fl['name'] if fl else '?'} не выполняет задачу уже 3 часа\n"
+                        f"«{t.get('title') or '—'}» — ждём причину от флориста")
+                continue
+
+            # Повтор каждые 10 мин
+            if elapsed >= 10 and int(elapsed) % 10 < 5:
+                fl = db.get_user_by_id(t["assigned_to"])
+                if fl:
+                    diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
+                    await app.bot.send_message(fl["telegram_id"],
+                        f"⏰ Напоминание: {diff_emoji} «{t.get('title') or '—'}»",
+                        reply_markup=kb.custom_task_kb(t["id"]))
+                if director and int(elapsed) % 30 < 5:
+                    fl = db.get_user_by_id(t["assigned_to"])
+                    await app.bot.send_message(director["telegram_id"],
+                        f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу «{t.get('title') or '—'}» уже {int(elapsed)} мин")
+        except Exception as e:
+            log.error(e)
+
+    # 3. Витрина < 6 — предупреждение (раз в день, в 11:00)
+    if now.hour == 11 and now.minute < 5:
+        workers = db.get_working_florists(today)
+        total_vitrina = db.count_active_bouquets() + db.count_active_compositions()
+        if total_vitrina < 6 and workers:
+            need = 6 - total_vitrina
+            for f in workers:
+                try:
+                    await app.bot.send_message(f["telegram_id"],
+                        f"🌸 На витрине сейчас {total_vitrina} шт. — нужно ещё {need}.\n"
+                        f"Собери букеты или композиции и добавь через /buket или /kompoziciya")
+                except Exception as e:
+                    log.error(e)
+            if director:
+                try:
+                    await app.bot.send_message(director["telegram_id"],
+                        f"🌸 Витрина: {total_vitrina} шт. (норма ≥ 6) — не хватает {need}")
+                except Exception as e:
+                    log.error(e)
 
 
 async def job_mandatory_task_deadline(app):

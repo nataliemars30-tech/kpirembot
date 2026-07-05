@@ -368,6 +368,7 @@ async def job_custom_tasks(app):
     import keyboards as kb
     today = today_msk()
     now_t = now_msk().strftime("%H:%M")
+    director = db.get_director()
     due   = db.get_due_custom_tasks(today, now_t)
     for t in due:
         try:
@@ -375,13 +376,56 @@ async def job_custom_tasks(app):
             if not fl:
                 continue
             diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
-            mand_txt = " 🔴 ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
+            mand_txt = " ❗️ ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
             await app.bot.send_message(fl["telegram_id"],
                 f"{diff_emoji} Задача: {t.get('title') or '—'}{mand_txt}",
                 reply_markup=kb.custom_task_kb(t["id"]))
             db.update_task(t["id"], sent_at=now_msk().isoformat())
         except Exception as e:
             log.error(e)
+            except Exception as e:
+            log.error(e)
+
+    # Повторы каждые 10 мин — задачи без ответа
+    from datetime import datetime as _dt
+    import pytz as _ptz
+    _msk = _ptz.timezone("Europe/Moscow")
+    now  = now_msk()
+    conn = db.get_conn(); cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM tasks WHERE type='custom' AND date=%s
+        AND status='pending' AND sent_at IS NOT NULL AND snoozed_until IS NULL
+    """, (today,))
+    pending = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
+    cur.close(); conn.close()
+
+    for t in pending:
+        try:
+            sent_at = _dt.fromisoformat(t["sent_at"])
+            if sent_at.tzinfo is None:
+                sent_at = _msk.localize(sent_at)
+            elapsed = (now - sent_at).total_seconds() / 60
+            if elapsed < 10:
+                continue
+            if int(elapsed) % 10 < 5:
+                fl = db.get_user_by_id(t["assigned_to"])
+                if fl:
+                    diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(
+                        t.get("difficulty") or "normal", "🟡")
+                    await app.bot.send_message(fl["telegram_id"],
+                        f"⏰ Напоминание: {diff_emoji} «{t.get('title') or '—'}»",
+                        reply_markup=kb.custom_task_kb(t["id"]))
+                if director and int(elapsed) % 30 < 5:
+                    fl = db.get_user_by_id(t["assigned_to"])
+                    await app.bot.send_message(director["telegram_id"],
+                        f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу "
+                        f"«{t.get('title') or '—'}» уже {int(elapsed)} мин")
+        except Exception as e:
+            log.error(e)
+
+    # ВСТАВЬ СЮДА — на одном уровне с for t in due:
+    conn = db.get_conn(); cur = conn.cursor()
+    ...
 
 
 async def job_mandatory_task_deadline(app):

@@ -383,8 +383,6 @@ async def job_custom_tasks(app):
             db.update_task(t["id"], sent_at=now_msk().isoformat())
         except Exception as e:
             log.error(e)
-            except Exception as e:
-            log.error(e)
 
     # Повторы каждые 10 мин — задачи без ответа
     from datetime import datetime as _dt

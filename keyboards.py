@@ -29,7 +29,7 @@ def task_difficulty_kb():
 
 def task_mandatory_kb():
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("🔴 Да, день в день", callback_data="tmand:yes"),
+        InlineKeyboardButton("❗️ Да, день в день", callback_data="tmand:yes"),
         InlineKeyboardButton("Нет, гибко", callback_data="tmand:no"),
     ]])
 
@@ -60,16 +60,16 @@ def custom_task_kb(task_id, require_photo=False):
 
 def rating_kb(task_id):
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("👎 Плохо", callback_data=f"rate:0:{task_id}"),
+        InlineKeyboardButton("💩 Плохо", callback_data=f"rate:0:{task_id}"),
         InlineKeyboardButton("👌 Норм", callback_data=f"rate:1:{task_id}"),
-        InlineKeyboardButton("⭐ Отлично", callback_data=f"rate:2:{task_id}"),
+        InlineKeyboardButton("❤️‍🔥 Отлично", callback_data=f"rate:2:{task_id}"),
     ]])
 
 def bouquet_rating_kb(bouquet_id):
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("👎 Плохо", callback_data=f"brate:0:{bouquet_id}"),
+        InlineKeyboardButton("💩 Плохо", callback_data=f"brate:0:{bouquet_id}"),
         InlineKeyboardButton("👌 Норм", callback_data=f"brate:1:{bouquet_id}"),
-        InlineKeyboardButton("⭐ Отлично", callback_data=f"brate:2:{bouquet_id}"),
+        InlineKeyboardButton("❤️‍🔥 Отлично", callback_data=f"brate:2:{bouquet_id}"),
     ]])
 
 def bouquet_status_kb(bouquet_id):
@@ -101,9 +101,9 @@ def bouquet_check_kb(bouquet_id):
 
 def composition_rating_kb(composition_id):
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("👎 Плохо", callback_data=f"crate:0:{composition_id}"),
+        InlineKeyboardButton("💩 Плохо", callback_data=f"crate:0:{composition_id}"),
         InlineKeyboardButton("👌 Норм", callback_data=f"crate:1:{composition_id}"),
-        InlineKeyboardButton("⭐ Отлично", callback_data=f"crate:2:{composition_id}"),
+        InlineKeyboardButton("❤️‍🔥 Отлично", callback_data=f"crate:2:{composition_id}"),
     ]])
 
 def composition_status_kb(composition_id):

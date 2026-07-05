@@ -32,7 +32,7 @@ TASK_LABELS = {
     "vitrina_compositions": "Витрина готовых композиций",
     "flowwow":              "Flowwow",
 }
-RATING_LABELS = {0: "👎 Плохо", 1: "👌 Норм", 2: "⭐ Отлично"}
+RATING_LABELS = {0: "🤮 Плохо", 1: "👌 Норм", 2: "❤️‍🔥 Отлично"}
 TASK_DIFFICULTY_WEIGHTS = {"light": 1, "normal": 2, "hard": 3}
 TASK_DIFFICULTY_LABELS  = {"light": "🟢 Лёгкая", "normal": "🟡 Обычная", "hard": "🔴 Сложная"}
 
@@ -162,7 +162,7 @@ async def shift_prompt(bot, florists):
                     f["telegram_id"], "Доброе утро! Пора открывать смену:",
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton(
-                            f"🟢 Начать смену — {f['name']}",
+                            f"☀️ Начать смену — {f['name']}",
                             callback_data=f"shift:{f['id']}")
                     ]]))
             except Exception as e:
@@ -177,7 +177,7 @@ async def send_task(bot, florist, task_type, scheduled_time, force=False):
     texts = {
         "vitrina_bouquets":     f"{scheduled_time} — Витрина готовых букетов!\nПришли фото:",
         "vitrina_compositions": f"{scheduled_time} — Витрина готовых композиций!\nПришли фото:",
-        "flowwow":              f"{scheduled_time} — Пора обновить Flowwow!\nПришли фото или скрин:",
+        "flowwow":              f"{scheduled_time} — Пора обновить Flowwow!\nПришли скрин:",
     }
     try:
         msg = await bot.send_message(

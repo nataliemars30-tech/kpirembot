@@ -595,7 +595,17 @@ def get_month_custom_tasks(year_month, florist_id=None):
     cur.execute(q, params)
     rows = _all(cur); cur.close(); conn.close()
     return rows
-
+    
+def get_day_custom_tasks(date_str, florist_id=None):
+    conn = get_conn(); cur = conn.cursor()
+    q = "SELECT * FROM tasks WHERE type='custom' AND date=%s"
+    params = [date_str]
+    if florist_id:
+        q += " AND assigned_to=%s"; params.append(florist_id)
+    cur.execute(q, params)
+    rows = _all(cur); cur.close(); conn.close()
+    return rows
+    
 def get_open_tasks(florist_id=None):
     """Открытые (ещё не закрытые) разовые задачи — для команды просмотра /zadachi."""
     conn = get_conn(); cur = conn.cursor()

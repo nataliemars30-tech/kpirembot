@@ -160,6 +160,17 @@ async def job_flowwow_copy(app):
             log.error(e)
 
 
+async def job_shift_report(app):
+    """20:50 — отчёт смены флористу и директору перед закрытием."""
+    from handlers import send_shift_report
+    today   = today_msk()
+    workers = db.get_working_florists(today)
+    for f in workers:
+        if not db.has_shift_closed(f["id"], today):
+            try:
+                await send_shift_report(app.bot, f["id"], today)
+            except Exception as e:
+                log.error(e)
 async def job_close_shift_prompt(app):
     """21:00 МСК — кнопка закрытия смены."""
     today   = today_msk()
@@ -565,6 +576,7 @@ def setup_scheduler(app):
     scheduler.add_job(wrapn(job_composition_check_4day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_custom_tasks), "interval", minutes=5)
     scheduler.add_job(wrapn(job_mandatory_task_deadline), CronTrigger(hour=0, minute=5, timezone=tz), misfire_grace_time=3600)
+    scheduler.add_job(wrapn(job_shift_report),       CronTrigger(hour=20, minute=50, timezone=tz))
     scheduler.add_job(wrapn(job_close_shift_prompt), CronTrigger(hour=21, minute=0, timezone=tz))
     scheduler.add_job(wrapn(job_kpi_warning),        CronTrigger(hour=10, minute=0, timezone=tz))
     scheduler.add_job(wrapn(job_weekly_report),      CronTrigger(day_of_week="mon", hour=9, minute=5, timezone=tz))

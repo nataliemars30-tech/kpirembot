@@ -600,6 +600,24 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # Директор нажала «Игнорировать»
     elif data.startswith("ask_reason_skip:"):
+        elif data.startswith("shift_rate:"):
+        _, rating, florist_id, date_str = data.split(":")
+        florist_id = int(florist_id)
+        if not is_director(q.from_user.id): return
+        fl = db.get_user_by_id(florist_id)
+        messages = {
+            "fire": "🔥 Директор оценила твою смену — Огонь! Так держать!",
+            "good": "👍 Директор оценила твою смену — Хорошо!",
+            "ok":   "😐 Директор: смена прошла нормально, есть к чему стремиться.",
+            "bad":  "😤 Директор недовольна сменой. Нужно поговорить.",
+        }
+        director_labels = {
+            "fire": "🔥 Огонь!", "good": "👍 Хорошо",
+            "ok": "😐 Нормально", "bad": "😤 Плохо",
+        }
+        if fl:
+            await ctx.bot.send_message(fl["telegram_id"], messages.get(rating, "Оценка получена"))
+        await safe_edit(q, f"Оценка смены {fl['name'] if fl else '?'} · {date_str}: {director_labels.get(rating, rating)}")
         await safe_edit(q, "Ок, пропустили.")
 
     # Настройки — fcopy
@@ -1418,6 +1436,147 @@ async def cmd_otkryt(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["receipt_shift_date"] = TODAY()
 
 
+async def send_shift_report(bot, florist_id, date_str):
+    """Отчёт смены за 10 минут до закрытия."""
+    fl    = db.get_user_by_id(florist_id)
+    if not fl: return
+    today = date_str
+
+    # Смена
+    shift = db.get_shift(florist_id, today)
+    open_time  = shift.get("receipt_time", "—") if shift else "—"
+    late_type  = shift.get("late_type") if shift else None
+    if late_type is None:
+        time_line = f"Открыта: {open_time} ✅ вовремя"
+    else:
+        late_labels = {"light": "лёгкое опоздание", "medium": "опоздание",
+                       "heavy": "серьёзное опоздание", "no_show": "критическое опоздание"}
+        time_line = f"Открыта: {open_time} ⚠️ {late_labels.get(late_type, 'опоздание')}"
+
+    lines = [f"📊 Итог смены · {fl['name']} · {today[8:]}.{today[5:7]}", "",
+             "🕐 СМЕНА", f"  {time_line}", ""]
+
+    # Стандартные задачи
+    tasks_std = db.get_month_tasks(florist_id, today)
+    std_map   = {t["type"]: t for t in tasks_std}
+
+    def task_line(label, emoji, task_type):
+        t = std_map.get(task_type)
+        if not t: return None
+        if t["status"] in ("submitted", "rated", "done"):
+            rating = RATING_LABELS.get(t.get("rating"), "")
+            return f"{emoji} {label} — ✅ сдала {('(' + rating + ')') if rating else ''}"
+        return f"{emoji} {label} — ❌ не сдала"
+
+    std_lines = []
+    l = task_line("ВИТРИНА БУКЕТОВ",    "🌸", "vitrina_bouquets")
+    if l: std_lines.append(l)
+    l = task_line("ВИТРИНА КОМПОЗИЦИЙ", "🎋", "vitrina_compositions")
+    if l: std_lines.append(l)
+
+    # Flowwow — только если был сегодня
+    flowwow_task = std_map.get("flowwow")
+    if flowwow_task:
+        if flowwow_task["status"] in ("submitted", "rated", "done"):
+            std_lines.append("🛍 FLOWWOW — ✅ сдала")
+        else:
+            std_lines.append("🛍 FLOWWOW — ❌ не сдала")
+
+    if std_lines:
+        lines += std_lines + [""]
+
+    # Разовые задачи
+    custom_tasks = [t for t in db.get_month_custom_tasks(today, florist_id)
+                    if t.get("date") == today]
+    if custom_tasks:
+        done_c = [t for t in custom_tasks if t["status"] in ("done","rated","ack")]
+        fail_c = [t for t in custom_tasks if t["status"] in ("no","missed","missed_mandatory")]
+        pend_c = [t for t in custom_tasks if t["status"] == "pending"]
+        lines.append(f"📋 РАЗОВЫЕ ЗАДАЧИ ({len(done_c)} из {len(custom_tasks)})")
+        for t in done_c:
+            diff = TASK_DIFFICULTY_LABELS.get(t.get("difficulty") or "normal", "")
+            lines.append(f"  ✅ {t.get('title') or '—'} {diff}")
+        for t in fail_c:
+            diff = TASK_DIFFICULTY_LABELS.get(t.get("difficulty") or "normal", "")
+            reason = f" · {t.get('no_reason')}" if t.get("no_reason") else ""
+            lines.append(f"  ❌ {t.get('title') or '—'} {diff}{reason}")
+        for t in pend_c:
+            diff = TASK_DIFFICULTY_LABELS.get(t.get("difficulty") or "normal", "")
+            lines.append(f"  ⏳ {t.get('title') or '—'} {diff} (не закрыта)")
+        lines.append("")
+
+    # Движение витрины за смену
+    conn = db.get_conn(); cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM bouquets WHERE florist_id=%s AND created_at LIKE %s",
+                (florist_id, f"{today}%"))
+    new_b = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM compositions WHERE florist_id=%s AND created_at LIKE %s",
+                (florist_id, f"{today}%"))
+    new_c = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM bouquets WHERE florist_id=%s AND sold_at LIKE %s AND sale_channel='studio'",
+                (florist_id, f"{today}%"))
+    sold_studio = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM bouquets WHERE florist_id=%s AND sold_at LIKE %s AND sale_channel='flowwow'",
+                (florist_id, f"{today}%"))
+    sold_fw = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM bouquets WHERE florist_id=%s AND disassembled_at LIKE %s",
+                (florist_id, f"{today}%"))
+    disasm_b = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM compositions WHERE florist_id=%s AND disassembled_at LIKE %s",
+                (florist_id, f"{today}%"))
+    disasm_c = cur.fetchone()[0]
+    cur.close(); conn.close()
+
+    vitrina_lines = []
+    if new_b or new_c:
+        parts = []
+        if new_b: parts.append(f"{new_b} букет{'а' if new_b in (2,3,4) else 'ов' if new_b > 4 else ''}")
+        if new_c: parts.append(f"{new_c} композиц{'ии' if new_c in (2,3,4) else 'ий' if new_c > 4 else 'ия'}")
+        vitrina_lines.append(f"  ➕ Собрано: {', '.join(parts)}")
+    if sold_studio or sold_fw:
+        parts = []
+        if sold_studio: parts.append(f"{sold_studio} в студии")
+        if sold_fw:     parts.append(f"{sold_fw} на Flowwow")
+        vitrina_lines.append(f"  💰 Продано: {', '.join(parts)}")
+    if disasm_b or disasm_c:
+        parts = []
+        if disasm_b: parts.append(f"{disasm_b} букет")
+        if disasm_c: parts.append(f"{disasm_c} композиция")
+        vitrina_lines.append(f"  🗑 Разобрано: {', '.join(parts)}")
+    if vitrina_lines:
+        lines.append("🌹 ВИТРИНА · движение за смену")
+        lines += vitrina_lines
+        lines.append("")
+
+    # Процент выполнения
+    total = len([t for t in tasks_std if t["type"] in ("vitrina_bouquets","vitrina_compositions")
+                 and std_map.get(t["type"])]) + (1 if flowwow_task else 0) + len(custom_tasks)
+    done  = len([t for t in tasks_std if t["type"] in ("vitrina_bouquets","vitrina_compositions")
+                 and std_map.get(t["type"]) and
+                 std_map[t["type"]]["status"] in ("submitted","rated","done")]) + \
+            (1 if flowwow_task and flowwow_task["status"] in ("submitted","rated","done") else 0) + \
+            len(done_c if custom_tasks else [])
+    pct   = round(done / total * 100) if total else 100
+
+    lines += ["━" * 16,
+              f"📈 СМЕНА ВЫПОЛНЕНА НА {pct}%"]
+
+    text = "\n".join(lines)
+
+    # Флористу
+    await bot.send_message(fl["telegram_id"], text)
+
+    # Директору с кнопками оценки
+    d = db.get_director()
+    if d:
+        rating_kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔥 Огонь!", callback_data=f"shift_rate:fire:{florist_id}:{today}"),
+            InlineKeyboardButton("👍 Хорошо",  callback_data=f"shift_rate:good:{florist_id}:{today}"),
+        ],[
+            InlineKeyboardButton("😐 Нормально", callback_data=f"shift_rate:ok:{florist_id}:{today}"),
+            InlineKeyboardButton("😤 Плохо",     callback_data=f"shift_rate:bad:{florist_id}:{today}"),
+        ]])
+        await bot.send_message(d["telegram_id"], text, reply_markup=rating_kb)
 async def cmd_zakryt(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = db.get_user(update.effective_user.id)
     if not user or user["role"] != "florist": return

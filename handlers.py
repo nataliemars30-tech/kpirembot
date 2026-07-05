@@ -544,11 +544,12 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if not task: return
         from datetime import date as _date, timedelta as _td
         new_date = (_date.fromisoformat(task["date"]) + _td(days=1)).isoformat()
-        db.update_task(task_id, date=new_date, sent_at=None, snoozed_until=None, status="pending")
-        await safe_edit(q, f"📅 «{task.get('title') or 'Задача'}» перенесена на {new_date}")
-        fl = db.get_user_by_id(task["assigned_to"])
-        await send_to_director(ctx.bot,
-            f"📅 {fl['name'] if fl else '?'} перенесла задачу «{task.get('title') or '—'}» на {new_date}")
+        ctx.user_data["move_task_id"]   = task_id
+        ctx.user_data["move_task_date"] = new_date
+        await safe_edit(q,
+            f"📅 Переносим «{task.get('title') or 'Задача'}» на {new_date}\n"
+            f"Во сколько напомнить? Формат ЧЧ:ММ (например 10:30)\n"
+            f"Или напиши «то же» чтобы оставить {task.get('scheduled_time', '—')}")
 
     # Оценка причины «Не сделано» директором
     elif data.startswith("reason_rate:"):
@@ -1023,6 +1024,31 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     # Причина невыполнения задачи
+    # Перенос задачи — ввод нового времени
+    if "move_task_id" in ctx.user_data:
+        task_id  = ctx.user_data.pop("move_task_id")
+        new_date = ctx.user_data.pop("move_task_date")
+        task     = db.get_task(task_id)
+        if text.strip().lower() in ("то же", "тоже", "same"):
+            new_time = task["scheduled_time"] if task else NOWT()
+        else:
+            import re as _re
+            m = _re.match(r"^(\d{1,2}):(\d{2})$", text.strip())
+            if not m or not (0 <= int(m.group(1)) <= 23 and 0 <= int(m.group(2)) <= 59):
+                await update.message.reply_text("Формат времени: ЧЧ:ММ, например 10:30\nИли напиши «то же»")
+                ctx.user_data["move_task_id"]   = task_id
+                ctx.user_data["move_task_date"] = new_date
+                return
+            new_time = f"{int(m.group(1)):02d}:{int(m.group(2)):02d}"
+        db.update_task(task_id, date=new_date, scheduled_time=new_time,
+                       sent_at=None, snoozed_until=None, status="pending")
+        await update.message.reply_text(
+            f"✅ Задача «{task.get('title') or '—'}» перенесена\n📅 {new_date} в {new_time}")
+        fl = db.get_user_by_id(task["assigned_to"]) if task else None
+        await send_to_director(ctx.bot,
+            f"📅 {fl['name'] if fl else user['name']} перенесла задачу "
+            f"«{task.get('title') if task else '—'}» на {new_date} в {new_time}")
+        return
     if "reason_task_id" in ctx.user_data:
         task_id = ctx.user_data.pop("reason_task_id")
         task = db.get_task(task_id)

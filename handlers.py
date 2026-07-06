@@ -601,8 +601,7 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await safe_edit(q, f"🔔 Отправила запрос флористу {fl['name'] if fl else ''}")
 
     # Директор нажала «Игнорировать»
-    elif data.startswith("ask_reason_skip:"):
-        elif data.startswith("shift_rate:"):
+    elif data.startswith("shift_rate:"):
         _, rating, florist_id, date_str = data.split(":")
         florist_id = int(florist_id)
         if not is_director(q.from_user.id): return
@@ -620,7 +619,6 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if fl:
             await ctx.bot.send_message(fl["telegram_id"], messages.get(rating, "Оценка получена"))
         await safe_edit(q, f"Оценка смены {fl['name'] if fl else '?'} · {date_str}: {director_labels.get(rating, rating)}")
-        await safe_edit(q, "Ок, пропустили.")
 
     # Настройки — fcopy
     elif data.startswith("fcopy:"):

@@ -585,8 +585,10 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"✅ {q.from_user.first_name} ознакомилась с оценкой по задаче «{task.get('title') if task else '—'}»")
 
     # Директор нажала «Спросить почему» (3 часа)
-    elif data.startswith("ask_reason:"):
+    elif data.startswith("ask_reason_skip:"):
         task_id = int(data.split(":")[1])
+        await safe_edit(q, "🔕 Уведомление проигнорировано")
+    elif data.startswith("shift_rate:"):
         if not is_director(q.from_user.id): return
         task = db.get_task(task_id)
         if not task: return

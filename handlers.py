@@ -1486,8 +1486,7 @@ async def send_shift_report(bot, florist_id, date_str):
         lines += std_lines + [""]
 
     # Разовые задачи
-    custom_tasks = [t for t in db.get_month_custom_tasks(today, florist_id)
-                    if t.get("date") == today]
+    custom_tasks = db.get_day_custom_tasks(today, florist_id)
     if custom_tasks:
         done_c = [t for t in custom_tasks if t["status"] in ("done","rated","ack")]
         fail_c = [t for t in custom_tasks if t["status"] in ("no","missed","missed_mandatory")]

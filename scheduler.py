@@ -154,7 +154,18 @@ async def job_flowwow_copy(app):
     workers = db.get_working_florists(today)
     import keyboards as kb
     for f in workers:
-
+        task = db.get_pending_task(f["id"], "flowwow_copy", today)
+        if task:
+            continue
+        task_id = db.create_task("flowwow_copy", f["id"], today, "11:00")
+        try:
+            msg = await app.bot.send_message(
+                f["telegram_id"],
+                "11:00 — Скопируй готовые букеты на Flowwow!",
+                reply_markup=kb.flowwow_copy_kb(task_id))
+            db.update_task(task_id, florist_msg_id=msg.message_id)
+        except Exception as e:
+            log.error(e)
 
 async def job_shift_report(app):
     """20:50 — отчёт смены флористу и директору перед закрытием."""

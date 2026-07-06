@@ -269,7 +269,8 @@ async def job_timeout_check(app):
             try:
                 await app.bot.send_message(director["telegram_id"],
                     f"Задача закрыта — нет ответа\n"
-                    f"{labels.get(t['type'], t['type'])} · {t['florist_name']}")
+                    f"📋 «{t.get('title') or labels.get(t['type'], t['type'])}»\n"
+                    f"👤 {t['florist_name']}")
             except Exception as e:
                 log.error(e)
 

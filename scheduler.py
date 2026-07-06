@@ -39,7 +39,7 @@ async def job_shift_prompt(app):
 
 async def job_shift_reminder(app):
     """
-    Каждые 5 минут с 9:50 до 12:00 МСК.
+    Каждые 5 минут с 9:59 до 12:00 МСК.
     Напоминает флористу открыть смену или прислать чек.
     """
     now   = now_msk()
@@ -111,7 +111,7 @@ async def job_shift_reminder(app):
 async def job_vitrina_bouquets(app):
     today   = today_msk()
     workers = db.get_working_florists(today)
-    t_str   = db.get_setting("vitrina_bouquets_time", "14:00")
+    t_str   = db.get_setting("vitrina_bouquets_time", "13:00")
     for f in workers:
         await send_task(app.bot, f, "vitrina_bouquets", t_str)
 
@@ -119,7 +119,7 @@ async def job_vitrina_bouquets(app):
 async def job_vitrina_compositions(app):
     today   = today_msk()
     workers = db.get_working_florists(today)
-    t_str   = db.get_setting("vitrina_compositions_time", "18:00")
+    t_str   = db.get_setting("vitrina_compositions_time", "15:00")
     for f in workers:
         await send_task(app.bot, f, "vitrina_compositions", t_str)
 
@@ -135,29 +135,25 @@ async def job_flowwow(app):
     if diff % 2 != 0:
         return  # не день Flowwow — сегодня «через день»
     workers = db.get_working_florists(today)
-    t_str   = db.get_setting("flowwow_time", "13:00")
+    t_str   = db.get_setting("flowwow_time", "14:00")
     for f in workers:
         await send_task(app.bot, f, "flowwow", t_str)
 
 
 async def job_flowwow_copy(app):
-    """11:00 — напоминание скопировать готовые букеты на Flowwow."""
-    today   = today_msk()
+    """11:00 — напоминание скопировать готовые букеты на Flowwow (через день)."""
+    today  = today_msk()
+    start  = db.get_setting("flowwow_start_date", today)
+    from datetime import date as _date
+    try:
+        diff = (_date.fromisoformat(today) - _date.fromisoformat(start)).days
+    except Exception:
+        diff = 0
+    if diff % 2 != 0:
+        return  # не день Flowwow
     workers = db.get_working_florists(today)
     import keyboards as kb
     for f in workers:
-        task = db.get_pending_task(f["id"], "flowwow_copy", today)
-        if task:
-            continue
-        task_id = db.create_task("flowwow_copy", f["id"], today, "11:00")
-        try:
-            msg = await app.bot.send_message(
-                f["telegram_id"],
-                "11:00 — Скопируй готовые букеты на Flowwow!",
-                reply_markup=kb.flowwow_copy_kb(task_id))
-            db.update_task(task_id, florist_msg_id=msg.message_id)
-        except Exception as e:
-            log.error(e)
 
 
 async def job_shift_report(app):
@@ -202,14 +198,14 @@ async def job_all_task_reminders(app):
 
     tasks_config = [
         ("vitrina_bouquets",
-         time_to_min(db.get_setting("vitrina_bouquets_time", "14:00")),
-         db.get_setting("vitrina_bouquets_time", "14:00")),
+         time_to_min(db.get_setting("vitrina_bouquets_time", "13:00")),
+         db.get_setting("vitrina_bouquets_time", "13:00")),
         ("vitrina_compositions",
          time_to_min(db.get_setting("vitrina_compositions_time", "15:00")),
          db.get_setting("vitrina_compositions_time", "15:00")),
         ("flowwow",
-         time_to_min(db.get_setting("flowwow_time", "13:00")),
-         db.get_setting("flowwow_time", "13:00")),
+         time_to_min(db.get_setting("flowwow_time", "14:00")),
+         db.get_setting("flowwow_time", "14:00")),
         ("flowwow_copy", 11 * 60, "11:00"),
     ]
 
@@ -245,7 +241,7 @@ async def job_all_task_reminders(app):
 
 async def job_timeout_check(app):
     """Задачи без ответа 30+ минут — закрыть как пропущенные."""
-    timeout  = int(db.get_setting("timeout_minutes", "30"))
+    db.get_setting("timeout_minutes", "660")
     director = db.get_director()
     conn = db.get_conn(); cur = conn.cursor()
     cur.execute("""
@@ -575,7 +571,7 @@ def setup_scheduler(app):
     scheduler.add_job(wrapn(job_bouquet_check_4day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_bouquet_check_6day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_composition_check_4day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
-    scheduler.add_job(wrapn(job_custom_tasks), "interval", minutes=5)
+    scheduler.add_job(wrapn(job_all_task_reminders), "interval", minutes=10)
     scheduler.add_job(wrapn(job_mandatory_task_deadline), CronTrigger(hour=0, minute=5, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_shift_report),       CronTrigger(hour=20, minute=50, timezone=tz))
     scheduler.add_job(wrapn(job_close_shift_prompt), CronTrigger(hour=21, minute=0, timezone=tz))

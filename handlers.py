@@ -595,8 +595,9 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         fl = db.get_user_by_id(task["assigned_to"])
         if fl:
             await ctx.bot.send_message(fl["telegram_id"],
-                f"❓ Директор спрашивает: задача «{task.get('title') or '—'}» "
-                f"открыта уже несколько часов — почему ещё не сделана?\n\nНапиши причину:")
+                f"❓ Директор спрашивает почему не выполнена задача:\n\n"
+                f"📋 «{task.get('title') or TASK_LABELS.get(task['type'], task['type'])}»\n\n"
+                f"Напиши причину:")
             db.update_task(task_id, status="waiting_reason")
         await safe_edit(q, f"🔔 Отправила запрос флористу {fl['name'] if fl else ''}")
 

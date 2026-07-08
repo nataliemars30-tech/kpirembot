@@ -1198,9 +1198,7 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             # Одна задача
             task_id = db.create_custom_task(assigned_to, created_by, task_date, scheduled_time,
                                             title, difficulty, mandatory, require_photo)
-            # Если время «сейчас» — помечаем sent_at чтобы джоба не дублировала
-            if task_date == TODAY() and scheduled_time == NOWT()[:5]:
-                db.update_task(task_id, sent_at=NOW())
+           db.update_task(task_id, sent_at=f"{task_date} {scheduled_time}:00")
             await update.message.reply_text(
                 f"✅ Задача создана!\n«{title}»\n"
                 f"{diff_label} · {task_date} в {scheduled_time}{mand_txt}{photo_txt}\n"

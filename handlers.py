@@ -635,8 +635,12 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 await ctx.bot.send_message(director["telegram_id"],
                     f"✅ {user['name'] if user else '—'} скопировала букеты на Flowwow")
         elif action == "later":
-            await q.message.edit_text("⏰ Напомню через 15 минут.", reply_markup=None)
-            ctx.user_data[f"fcopy_remind_{task_id}"] = NOW()
+            from datetime import datetime as _dt, timedelta as _td
+            import pytz as _ptz
+            _msk = _ptz.timezone("Europe/Moscow")
+            snooze_until = (_dt.now(_msk) + _td(minutes=15)).strftime("%H:%M")
+            db.update_task(task_id, snoozed_until=snooze_until, sent_at=None)
+            await q.message.edit_text(f"⏰ Напомню в {snooze_until}.", reply_markup=None)
         elif action == "no":
             db.update_task(task_id, status="missed", no_reason="Не скопировала")
             await q.message.edit_text("Понятно. Директор получит уведомление.", reply_markup=None)

@@ -252,7 +252,7 @@ async def job_all_task_reminders(app):
 
 async def job_timeout_check(app):
     """Задачи без ответа 30+ минут — закрыть как пропущенные."""
-    db.get_setting("timeout_minutes", "660")
+    timeout = int(db.get_setting("timeout_minutes", "660"))
     director = db.get_director()
     conn = db.get_conn(); cur = conn.cursor()
     cur.execute("""
@@ -550,7 +550,10 @@ def setup_scheduler(app):
 
     def wrapn(func):
         async def wrapper():
-            await func(app)
+            try:
+                await func(app)
+            except Exception as e:
+                log.error(f"Job {func.__name__} error: {e}", exc_info=True)
         return wrapper
 
     def wrap(func, *args):

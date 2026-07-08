@@ -389,6 +389,7 @@ async def job_custom_tasks(app):
     now_t = now_msk().strftime("%H:%M")
     director = db.get_director()
     due   = db.get_due_custom_tasks(today, now_t)
+    log.info(f"job_custom_tasks: today={today} now={now_t} found={len(due)} tasks")
     for t in due:
         try:
             fl = db.get_user_by_id(t["assigned_to"])

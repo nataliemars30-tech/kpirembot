@@ -1171,8 +1171,12 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             for t_title in titles:
                 tid = db.create_custom_task(assigned_to, created_by, task_date, scheduled_time,
                                             t_title, difficulty, mandatory, require_photo)
-                if task_date == TODAY() and scheduled_time == NOWT()[:5]:
-                    db.update_task(tid, sent_at=NOW())
+                from datetime import datetime as _dt
+            import pytz as _ptz
+            _msk = _ptz.timezone("Europe/Moscow")
+            scheduled_dt = _dt.strptime(f"{task_date} {scheduled_time}", "%Y-%m-%d %H:%M")
+            scheduled_dt = _msk.localize(scheduled_dt)
+            db.update_task(task_id, sent_at=scheduled_dt.isoformat())
                 created_ids.append((tid, t_title))
             await update.message.reply_text(
                 f"✅ Создано {len(created_ids)} задач!\n" +

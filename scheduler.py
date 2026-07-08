@@ -441,8 +441,7 @@ async def job_custom_tasks(app):
             log.error(e)
 
     # ВСТАВЬ СЮДА — на одном уровне с for t in due:
-    conn = db.get_conn(); cur = conn.cursor()
-    ...
+    
 
 
 async def job_mandatory_task_deadline(app):

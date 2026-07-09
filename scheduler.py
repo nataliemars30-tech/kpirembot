@@ -398,6 +398,7 @@ async def job_custom_tasks(app):
                 continue
             diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
             mand_txt = " ❗️ ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
+            mand_txt_j = " ❗️ Обязательно сегодня" if t.get("mandatory") else ""
             await app.bot.send_message(fl["telegram_id"],
                 f"📝 Задача: <b>«{t.get('title') or '—'}»</b>\n"
                 f"⏰ {t.get('scheduled_time', '')}{mand_txt_j}\n"

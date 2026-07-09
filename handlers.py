@@ -34,8 +34,7 @@ TASK_LABELS = {
 }
 RATING_LABELS = {0: "🤮 Плохо", 1: "👌 Норм", 2: "❤️‍🔥 Отлично"}
 TASK_DIFFICULTY_WEIGHTS = {"light": 1, "normal": 1, "hard": 1}  # когда-нибудь / обычная / срочная
-TASK_DIFFICULTY_LABELS  = {"light": "🟢 Когда-нибудь", "normal": "🟡 Обычная", "hard": "❗️ Срочная"}
-
+TASK_DIFFICULTY_LABELS  = {"light": "🌱 Когда-нибудь", "normal": "⭐️ Обычная", "hard": "❗️ Срочная"}
 def is_director(tid): u = db.get_user(tid); return u and u["role"] == "director"
 def is_florist(tid):  u = db.get_user(tid); return u and u["role"] == "florist"
 

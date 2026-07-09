@@ -1204,10 +1204,11 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 f"Кому: {fl['name'] if fl else '—'}")
             if assigned_to != created_by and fl:
                 try:
-                    await ctx.bot.send_message(fl["telegram_id"],
-                        f"📝 Новая задача: «{title}»\n"
-                        f"⏰ {task_date} в {scheduled_time}\n"
-                        f"{diff_label}{mand_txt}",
+                    aawait ctx.bot.send_message(fl["telegram_id"],
+                        f"📝 Новая задача: <b>«{title}»</b>\n"
+                        f"⏰ {scheduled_time}{mand_txt}\n"
+                        f"{diff_label}",
+                        parse_mode="HTML",
                         reply_markup=kb.custom_task_kb(task_id, require_photo=require_photo))
                 except Exception as e:
                     log.error(e)

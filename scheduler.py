@@ -396,12 +396,12 @@ async def job_custom_tasks(app):
             fl = db.get_user_by_id(t["assigned_to"])
             if not fl:
                 continue
-            diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
-            mand_txt = " ❗️ ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
-            mand_txt_j = " ❗️ Обязательно сегодня" if t.get("mandatory") else ""
+            is_mandatory = bool(t.get("mandatory"))
+            diff_key = "hard" if is_mandatory else (t.get("difficulty") or "normal")
+           diff_emoji = {"light": "🌱 Когда-нибудь", "normal": "⭐️ Обычная", "hard": "❗️ Срочная"}.get(diff_key, "⭐️")
             await app.bot.send_message(fl["telegram_id"],
                 f"📝 Задача: <b>«{t.get('title') or '—'}»</b>\n"
-                f"⏰ {t.get('scheduled_time', '')}{mand_txt_j}\n"
+                f"⏰ {t.get('scheduled_time', '')}\n"
                 f"{diff_emoji}",
                 parse_mode="HTML",
                 reply_markup=kb.custom_task_kb(t["id"]))

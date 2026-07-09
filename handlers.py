@@ -1186,8 +1186,6 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                             f"⏰ {scheduled_time}{mand_txt}\n"
                             f"{diff_label}",
                             parse_mode="HTML",
-                        f"{diff_label}",
-                        parse_mode="HTML",
                             reply_markup=kb.custom_task_kb(tid, require_photo=require_photo))
                 except Exception as e:
                     log.error(e)

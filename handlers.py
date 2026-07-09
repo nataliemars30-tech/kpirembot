@@ -33,8 +33,8 @@ TASK_LABELS = {
     "flowwow":              "Flowwow",
 }
 RATING_LABELS = {0: "🤮 Плохо", 1: "👌 Норм", 2: "❤️‍🔥 Отлично"}
-TASK_DIFFICULTY_WEIGHTS = {"light": 1, "normal": 2, "hard": 3}
-TASK_DIFFICULTY_LABELS  = {"light": "🟢 Лёгкая", "normal": "🟡 Обычная", "hard": "🔴 Сложная"}
+TASK_DIFFICULTY_WEIGHTS = {"light": 1, "normal": 1, "hard": 1}  # когда-нибудь / обычная / срочная
+TASK_DIFFICULTY_LABELS  = {"light": "🟢 Когда-нибудь", "normal": "🟡 Обычная", "hard": "❗️ Срочная"}
 
 def is_director(tid): u = db.get_user(tid); return u and u["role"] == "director"
 def is_florist(tid):  u = db.get_user(tid); return u and u["role"] == "florist"
@@ -1181,11 +1181,10 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if assigned_to != created_by and fl:
                 try:
                     for tid, t_title in created_ids:
-                        await ctx.bot.send_message(fl["telegram_id"],
-                            f"📝 Тебе поставили задачу\n"
-                            f"«{t_title}» · {diff_label} · {task_date} {scheduled_time}{mand_txt}{photo_txt}\n"
-                            f"От: {creator['name'] if creator else 'директора'}\n"
-                            f"Если уже сделала — нажми кнопку:",
+                        aawait ctx.bot.send_message(fl["telegram_id"],
+                            f"📝 Новая задача: «{t_title}»\n"
+                            f"⏰ {task_date} в {scheduled_time}\n"
+                            f"{diff_label}{mand_txt}",
                             reply_markup=kb.custom_task_kb(tid, require_photo=require_photo))
                 except Exception as e:
                     log.error(e)
@@ -1205,10 +1204,9 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if assigned_to != created_by and fl:
                 try:
                     await ctx.bot.send_message(fl["telegram_id"],
-                        f"📝 Тебе поставили новую задачу\n"
-                        f"«{title}» · {diff_label} · {task_date} {scheduled_time}{mand_txt}{photo_txt}\n"
-                        f"От: {creator['name'] if creator else 'директора'}\n"
-                        f"Если уже сделала — нажми кнопку:",
+                        f"📝 Новая задача: «{title}»\n"
+                        f"⏰ {task_date} в {scheduled_time}\n"
+                        f"{diff_label}{mand_txt}",
                         reply_markup=kb.custom_task_kb(task_id, require_photo=require_photo))
                 except Exception as e:
                     log.error(e)

@@ -1182,11 +1182,11 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 try:
                     for tid, t_title in created_ids:
                         await ctx.bot.send_message(fl["telegram_id"],
-                            f"📝 Новая задача: <b>«{t_title}»</b>\n"
-                            f"⏰ {scheduled_time}{mand_txt}\n"
-                            f"{diff_label}",
-                            parse_mode="HTML",
-                            reply_markup=kb.custom_task_kb(tid, require_photo=require_photo))
+                        f"📝 Новая задача: <b>«{title}»</b>\n"
+                        f"⏰ {scheduled_time}{mand_txt}\n"
+                        f"{diff_label}",
+                        parse_mode="HTML",
+                        reply_markup=kb.custom_task_kb(task_id, require_photo=require_photo))
                 except Exception as e:
                     log.error(e)
             elif assigned_to == created_by:

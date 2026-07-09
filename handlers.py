@@ -1181,7 +1181,7 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if assigned_to != created_by and fl:
                 try:
                     for tid, t_title in created_ids:
-                        aawait ctx.bot.send_message(fl["telegram_id"],
+                        await ctx.bot.send_message(fl["telegram_id"],
                             f"📝 Новая задача: «{t_title}»\n"
                             f"⏰ {task_date} в {scheduled_time}\n"
                             f"{diff_label}{mand_txt}",

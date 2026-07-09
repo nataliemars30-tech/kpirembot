@@ -399,7 +399,10 @@ async def job_custom_tasks(app):
             diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(t.get("difficulty") or "normal", "🟡")
             mand_txt = " ❗️ ОБЯЗАТЕЛЬНО СЕГОДНЯ" if t.get("mandatory") else ""
             await app.bot.send_message(fl["telegram_id"],
-                f"{diff_emoji} Задача: {t.get('title') or '—'}{mand_txt}",
+                f"📝 Задача: <b>«{t.get('title') or '—'}»</b>\n"
+                f"⏰ {t.get('scheduled_time', '')}{mand_txt_j}\n"
+                f"{diff_emoji}",
+                parse_mode="HTML",
                 reply_markup=kb.custom_task_kb(t["id"]))
             db.update_task(t["id"], sent_at=now_msk().isoformat())
         except Exception as e:

@@ -47,15 +47,16 @@ def task_photo_confirm_kb():
     ]])
 
 def custom_task_kb(task_id, require_photo=False):
-    """Кнопки на задаче у флориста. require_photo — нужно ли фото при выполнении."""
+    """Кнопки на задаче у флориста."""
     done_cb    = f"mtask_done_photo:{task_id}" if require_photo else f"mtask_done:{task_id}"
     done_label = "✅ Сделано (с фото)" if require_photo else "✅ Сделано"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(done_label, callback_data=done_cb)],
-        [InlineKeyboardButton("❌ Не сделано", callback_data=f"mtask_no:{task_id}")],
-        [InlineKeyboardButton("⏰ Через 30 мин", callback_data=f"mtask_snooze:30:{task_id}"),
-         InlineKeyboardButton("⏰ Через час", callback_data=f"mtask_snooze:60:{task_id}")],
-        [InlineKeyboardButton("📅 Перенести на завтра", callback_data=f"mtask_move:{task_id}")],
+        [InlineKeyboardButton("👍 Принято", callback_data=f"mtask_ack:{task_id}")],
+        [InlineKeyboardButton(done_label, callback_data=done_cb),
+         InlineKeyboardButton("❌ Не сделано", callback_data=f"mtask_no:{task_id}")],
+        [InlineKeyboardButton("30 мин", callback_data=f"mtask_snooze:30:{task_id}"),
+         InlineKeyboardButton("1 час", callback_data=f"mtask_snooze:60:{task_id}"),
+         InlineKeyboardButton("Перенести", callback_data=f"mtask_move:{task_id}")],
     ])
 
 def rating_kb(task_id):

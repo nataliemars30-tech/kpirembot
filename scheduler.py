@@ -259,9 +259,10 @@ async def job_timeout_check(app):
         SELECT t.*, u.name as florist_name
         FROM tasks t JOIN users u ON t.assigned_to=u.id
         WHERE t.status='pending'
+        AND t.date = %s
         AND (t.date || ' ' || t.scheduled_time)::timestamp
             <= NOW() - INTERVAL '1 minute' * %s
-    """, (timeout,))
+    """, (today_msk(), timeout,))
     rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
     cur.close(); conn.close()
 

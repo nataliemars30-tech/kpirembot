@@ -433,11 +433,13 @@ async def job_custom_tasks(app):
                     await app.bot.send_message(fl["telegram_id"],
                         f"⏰ Напоминание: {diff_emoji} «{t.get('title') or '—'}»",
                         reply_markup=kb.custom_task_kb(t["id"]))
-                if director and int(elapsed) % 30 < 5:
+                if director and int(elapsed) % 60 < 5:
                     fl = db.get_user_by_id(t["assigned_to"])
+                    import keyboards as kb
                     await app.bot.send_message(director["telegram_id"],
                         f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу "
-                        f"«{t.get('title') or '—'}» уже {int(elapsed)} мин")
+                        f"«{t.get('title') or '—'}» уже {int(elapsed)} мин",
+                        reply_markup=kb.ask_reason_kb(t["id"]))
         except Exception as e:
             log.error(e)
 

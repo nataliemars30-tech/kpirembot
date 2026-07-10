@@ -1170,7 +1170,6 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             for t_title in titles:
                 tid = db.create_custom_task(assigned_to, created_by, task_date, scheduled_time,
                                             t_title, difficulty, mandatory, require_photo)
-                db.update_task(tid, sent_at=f"{task_date} {scheduled_time}:00")
                 created_ids.append((tid, t_title))
             await update.message.reply_text(
                 f"✅ Создано {len(created_ids)} задач!\n" +

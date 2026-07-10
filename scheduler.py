@@ -414,7 +414,7 @@ async def job_custom_tasks(app):
         except Exception as e:
             log.error(e)
 
-    # Повторы каждые 10 мин — задачи без ответа
+   # Повторы каждые 10 мин — задачи без ответа
     from datetime import datetime as _dt
     import pytz as _ptz
     _msk = _ptz.timezone("Europe/Moscow")
@@ -422,13 +422,16 @@ async def job_custom_tasks(app):
     conn = db.get_conn(); cur = conn.cursor()
     cur.execute("""
         SELECT * FROM tasks WHERE type='custom' AND date=%s
-        AND status='pending' AND sent_at IS NOT NULL AND snoozed_until IS NULL
+        AND status='pending' AND sent_at IS NOT NULL
     """, (today,))
     pending = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()]
     cur.close(); conn.close()
-
     for t in pending:
         try:
+            # Проверяем снуз
+            if t.get("snoozed_until"):
+                if now_t < t["snoozed_until"]:
+                    continue  # ещё не время
             sent_at = _dt.fromisoformat(t["sent_at"])
             if sent_at.tzinfo is None:
                 sent_at = _msk.localize(sent_at)
@@ -437,19 +440,20 @@ async def job_custom_tasks(app):
                 continue
             if int(elapsed) % 10 < 5:
                 fl = db.get_user_by_id(t["assigned_to"])
+                diff_label = {"light": "🌱 Когда-нибудь", "normal": "⭐️ Обычная", "hard": "❗️ Срочная"}.get(
+                    t.get("difficulty") or "normal", "⭐️")
                 if fl:
-                    diff_emoji = {"light": "🟢", "normal": "🟡", "hard": "🔴"}.get(
-                        t.get("difficulty") or "normal", "🟡")
                     await app.bot.send_message(fl["telegram_id"],
-                        f"⏰ Напоминание: {diff_emoji} «{t.get('title') or '—'}»",
+                        f"⏰ Напоминание: «{t.get('title') or '—'}»\n"
+                        f"⏱ Было назначено на {t.get('scheduled_time', '')}\n"
+                        f"{diff_label}",
                         reply_markup=kb.custom_task_kb(t["id"]))
-                if director and int(elapsed) % 60 < 5:
-                    fl = db.get_user_by_id(t["assigned_to"])
-                    import keyboards as kb
-                    await app.bot.send_message(director["telegram_id"],
-                        f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу "
-                        f"«{t.get('title') or '—'}» уже {int(elapsed)} мин",
-                        reply_markup=kb.ask_reason_kb(t["id"]))
+            if director and int(elapsed) % 60 < 5:
+                fl = db.get_user_by_id(t["assigned_to"])
+                await app.bot.send_message(director["telegram_id"],
+                    f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу "
+                    f"«{t.get('title') or '—'}» уже {int(elapsed)} мин",
+                    reply_markup=kb.ask_reason_kb(t["id"]))
         except Exception as e:
             log.error(e)
 

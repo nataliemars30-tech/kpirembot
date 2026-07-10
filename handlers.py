@@ -1160,7 +1160,9 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         fl         = db.get_user_by_id(assigned_to)
         creator    = db.get_user_by_id(created_by) if assigned_to != created_by else None
-        mand_txt   = "\n❗️ Обязательно сегодня" if mandatory else ""
+        if mandatory:
+            difficulty = "hard"
+        mand_txt   = ""
         photo_txt  = "\n📷 Требуется фото-подтверждение" if require_photo else ""
         diff_label = TASK_DIFFICULTY_LABELS.get(difficulty, difficulty)
 

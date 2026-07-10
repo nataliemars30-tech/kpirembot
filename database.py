@@ -138,6 +138,8 @@ def init_db():
         "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_reason TEXT",
         "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS reason_rating TEXT",
         "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS require_photo INTEGER DEFAULT 0",
+        "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS ack_at TEXT",
+        "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS ack_alert_sent INTEGER DEFAULT 0",
     ]
     for sql in migrations:
         try:

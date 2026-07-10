@@ -388,9 +388,14 @@ async def job_custom_tasks(app):
     import keyboards as kb
     today = today_msk()
     now_t = now_msk().strftime("%H:%M")
+    log.info(f"job_custom_tasks START: today={today} now={now_t}")
     director = db.get_director()
-    due   = db.get_due_custom_tasks(today, now_t)
-    log.info(f"job_custom_tasks: today={today} now={now_t} found={len(due)} tasks")
+    try:
+        due = db.get_due_custom_tasks(today, now_t)
+    except Exception as e:
+        log.error(f"job_custom_tasks get_due error: {e}", exc_info=True)
+        return
+    log.info(f"job_custom_tasks: found={len(due)} tasks")
     for t in due:
         try:
             fl = db.get_user_by_id(t["assigned_to"])

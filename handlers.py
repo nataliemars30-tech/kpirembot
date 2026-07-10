@@ -484,6 +484,14 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=None)
 
     # Разовая задача — сделано
+    elif data.startswith("mtask_ack:"):
+        task_id = int(data.split(":")[1])
+        task = db.get_task(task_id)
+        if not task: return
+        await safe_edit(q, f"👍 Принято — «{task.get('title') or '—'}»")
+        fl = db.get_user_by_id(task["assigned_to"])
+        await send_to_director(ctx.bot,
+            f"👍 {fl['name'] if fl else '?'} приняла задачу «{task.get('title') or '—'}»")
     elif data.startswith("mtask_done:"):
         task_id = int(data.split(":")[1])
         task = db.get_task(task_id)

@@ -452,8 +452,10 @@ async def job_custom_tasks(app):
             if director and int(elapsed) % 60 < 5:
                 fl = db.get_user_by_id(t["assigned_to"])
                 await app.bot.send_message(director["telegram_id"],
-                    f"⏳ {fl['name'] if fl else '?'} не отвечает на задачу "
-                    f"«{t.get('title') or '—'}» уже {int(elapsed)} мин",
+                    f"⏳ <b>{fl['name'] if fl else '?'}</b> не отвечает на задачу\n"
+                    f"«{t.get('title') or '—'}»\n"
+                    f"\n<i>уже {int(elapsed)} мин</i>",
+                    parse_mode="HTML",
                     reply_markup=kb.ask_reason_kb(t["id"]))
         except Exception as e:
             log.error(e)

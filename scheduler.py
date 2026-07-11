@@ -604,7 +604,7 @@ def setup_scheduler(app):
     scheduler.add_job(wrapn(job_bouquet_check_4day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_bouquet_check_6day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_composition_check_4day), CronTrigger(hour=12, minute=0, timezone=tz), misfire_grace_time=3600)
-    scheduler.add_job(wrapn(job_custom_tasks), "interval", minutes=5)
+    scheduler.add_job(wrapn(job_custom_tasks), "interval", minutes=5, start_date="2020-01-01 00:00:30")
     scheduler.add_job(wrapn(job_mandatory_task_deadline), CronTrigger(hour=0, minute=5, timezone=tz), misfire_grace_time=3600)
     scheduler.add_job(wrapn(job_shift_report),       CronTrigger(hour=20, minute=50, timezone=tz))
     scheduler.add_job(wrapn(job_close_shift_prompt), CronTrigger(hour=21, minute=0, timezone=tz))

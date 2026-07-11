@@ -414,7 +414,7 @@ async def job_custom_tasks(app):
         except Exception as e:
             log.error(e)
 
-   # Повторы каждые 10 мин — задачи без ответа
+    # Повторы каждые 10 мин — задачи без ответа
     from datetime import datetime as _dt
     import pytz as _ptz
     _msk = _ptz.timezone("Europe/Moscow")

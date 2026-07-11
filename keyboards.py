@@ -22,9 +22,9 @@ def task_florist_pick_kb(florists):
 
 def task_difficulty_kb():
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("🟢 Лёгкая", callback_data="tdiff:light"),
-        InlineKeyboardButton("🟡 Обычная", callback_data="tdiff:normal"),
-        InlineKeyboardButton("🔴 Сложная", callback_data="tdiff:hard"),
+        InlineKeyboardButton("🌱 Когда-нибудь", callback_data="tdiff:light"),
+        InlineKeyboardButton("⭐️ Обычная", callback_data="tdiff:normal"),
+        InlineKeyboardButton("❗️ Срочная", callback_data="tdiff:hard"),
     ]])
 
 def task_mandatory_kb():

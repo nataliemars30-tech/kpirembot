@@ -405,9 +405,9 @@ async def job_custom_tasks(app):
             diff_key = "hard" if is_mandatory else (t.get("difficulty") or "normal")
             diff_emoji = {"light": "🌱 Когда-нибудь", "normal": "⭐️ Обычная", "hard": "❗️ Срочная"}.get(diff_key, "⭐️")
             await app.bot.send_message(fl["telegram_id"],
-                f"📝 Задача: <b>«{t.get('title') or '—'}»</b>\n"
-                f"⏰ {t.get('scheduled_time', '')}\n"
-                f"{diff_emoji}",
+                f"Новая задача: <b>«{t.get('title') or '—'}»</b>\n"
+                f"🕐 {t.get('scheduled_time', '')}\n"
+                f"\n<i>{diff_emoji}</i>",
                 parse_mode="HTML",
                 reply_markup=kb.custom_task_kb(t["id"]))
             db.update_task(t["id"], sent_at=now_msk().isoformat())
@@ -444,9 +444,10 @@ async def job_custom_tasks(app):
                     t.get("difficulty") or "normal", "⭐️")
                 if fl:
                     await app.bot.send_message(fl["telegram_id"],
-                        f"⏰ Напоминание: «{t.get('title') or '—'}»\n"
-                        f"⏱ Было назначено на {t.get('scheduled_time', '')}\n"
-                        f"{diff_label}",
+                        f"Напоминание: <b>«{t.get('title') or '—'}»</b>\n"
+                        f"🕐 {t.get('scheduled_time', '')}\n"
+                        f"\n<i>{diff_label}</i>",
+                        parse_mode="HTML",
                         reply_markup=kb.custom_task_kb(t["id"]))
             if director and int(elapsed) % 60 < 5:
                 fl = db.get_user_by_id(t["assigned_to"])

@@ -502,8 +502,10 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         fl = db.get_user_by_id(task["assigned_to"])
         diff_label = TASK_DIFFICULTY_LABELS.get(task.get("difficulty") or "normal", "🟡 Обычная")
         await send_to_director(ctx.bot,
-            f"✅ {fl['name'] if fl else '?'} выполнила задачу\n"
-            f"«{task.get('title') or '—'}» ({diff_label})",
+            f"✅ <b>{fl['name'] if fl else '?'}</b> выполнила задачу\n"
+            f"«{task.get('title') or '—'}»\n"
+            f"\n<i>{diff_label}</i>",
+            parse_mode="HTML",
             reply_markup=kb.rating_kb(task_id))
 
     # Разовая задача — сделано с фото (запрос фото)
@@ -1077,8 +1079,9 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"✅ Задача «{task.get('title') or '—'}» перенесена\n📅 {new_date} в {new_time}")
         fl = db.get_user_by_id(task["assigned_to"]) if task else None
         await send_to_director(ctx.bot,
-            f"📅 {fl['name'] if fl else user['name']} перенесла задачу "
-            f"«{task.get('title') if task else '—'}» на {new_date} в {new_time}")
+            f"📅 <b>{fl['name'] if fl else user['name']}</b> перенесла задачу\n"
+            f"«{task.get('title') if task else '—'}» → {new_date} в {new_time}",
+            parse_mode="HTML")
         return
     if "reason_task_id" in ctx.user_data:
         task_id = ctx.user_data.pop("reason_task_id")
@@ -1088,7 +1091,10 @@ async def text_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if task and task["type"] == "custom":
             label = task.get("title") or "разовая задача"
             await send_to_director(ctx.bot,
-                f"❌ {user['name']} не выполнила задачу\n«{label}»\nПричина: {text}\n\nОцени:",
+                f"❌ <b>{user['name']}</b> не выполнила задачу\n"
+                f"«{label}»\n"
+                f"\nПричина: {text}",
+                parse_mode="HTML",
                 reply_markup=kb.reason_rate_kb(task_id))
         else:
             label = TASK_LABELS.get(task["type"], task["type"]) if task else "задача"

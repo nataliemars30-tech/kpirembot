@@ -575,7 +575,8 @@ def get_due_custom_tasks(date_str, time_str):
     conn = get_conn(); cur = conn.cursor()
     cur.execute(
         "SELECT * FROM tasks WHERE type='custom' AND date=%s AND sent_at IS NULL "
-        "AND scheduled_time <= %s AND status='pending'", (date_str, time_str))
+        "AND scheduled_time <= %s AND status='pending' "
+        "AND (snoozed_until IS NULL OR snoozed_until <= %s)", (date_str, time_str, time_str))
     rows = _all(cur); cur.close(); conn.close()
     return rows
 
